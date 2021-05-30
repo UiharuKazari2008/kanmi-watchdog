@@ -242,7 +242,7 @@ function runtime() {
                     const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
                     timeStamps += `${_tS}:${_tI} `
                     if ( !isNaN(_tI) && _tI <= 5) {
-                        statusText += '🚨'
+                        statusText += '🔺'
                         if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
                             discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
                                 .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
