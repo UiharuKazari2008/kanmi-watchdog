@@ -33,6 +33,7 @@ const http = require('http').createServer(app).listen(7950);
 const RateLimiter = require('limiter').RateLimiter;
 const limiter1 = new RateLimiter(5, 250);
 const cron = require('node-cron');
+let init = 0;
 
 const Logger = require('./utils/logSystem')(facilityName);
 const db = require('./utils/shutauraSQL')(facilityName);
@@ -279,6 +280,13 @@ function runtime() {
     setInterval(updateIndicators, 60000);
     discordClient.on("ready", () => {
         Logger.printLine("Discord", "Connected successfully to Discord!", "debug");
+        if (init === 0) {
+            discordClient.editStatus( "online", {
+                name: 'the datacenters',
+                type: 3
+            })
+            init = 1;
+        }
         updateIndicators();
     });
     discordClient.on("error", (err) => {
