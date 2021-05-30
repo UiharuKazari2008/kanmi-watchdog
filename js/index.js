@@ -266,7 +266,7 @@ function runtime() {
                         watchdogsDead.delete(`${w.id}-${e}`);
                     }
                 })
-                console.log(`"${_ch.name}" <= "${statusText}" - ${timeStamps}`)
+                //console.log(`"${_ch.name}" <= "${statusText}" - ${timeStamps}`)
                 if (_ch.name !== statusText) {
                     discordClient.editChannel(w.channel, { name: statusText}, "Status Update")
                         .catch(err => { mqClient.sendMessage(`Error updating "${w.channel}" status text : ${err.message}`, "err", "StatusUpdate", err); })
