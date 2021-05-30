@@ -43,6 +43,7 @@ let watchdogsEntities = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
 
+const startDate = new Date().getTime()
 watchdogConfig.Discord_Status.forEach(w => {
     watchdogs.set(w.id, {
         id: w.id,
@@ -51,12 +52,12 @@ watchdogConfig.Discord_Status.forEach(w => {
         header: w.header,
         entities: w.watchdogs
     });
-    w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, new Date().getTime()); });
+    w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startDate); });
     console.log('Registered Entities')
 })
 setInterval(() => {
     watchdogConfig.Discord_Status.forEach(w => {
-        w.watchdogs.forEach(e => { watchdogsReady.set(`${w.id}-${e}`, new Date().getTime()); });
+        w.watchdogs.forEach(e => { watchdogsReady.set(`${w.id}-${e}`, startDate); });
         console.log('Registered Ready Entities')
     })
 }, 5.1 * 60000)
