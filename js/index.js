@@ -56,7 +56,7 @@ watchdogConfig.Discord_Status.forEach(w => {
     w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startDate); });
     console.log('Registered Entities')
 })
-setInterval(() => {
+setTimeout(() => {
     watchdogConfig.Discord_Status.forEach(w => {
         w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startDate); } });
         console.log('Registered Ready Entities')
