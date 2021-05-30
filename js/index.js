@@ -58,7 +58,7 @@ watchdogConfig.Discord_Status.forEach(w => {
 })
 setInterval(() => {
     watchdogConfig.Discord_Status.forEach(w => {
-        w.watchdogs.forEach(e => { watchdogsReady.set(`${w.id}-${e}`, startDate); });
+        w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startDate); } });
         console.log('Registered Ready Entities')
     })
 }, 5.1 * 60000)
