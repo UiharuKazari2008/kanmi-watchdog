@@ -188,7 +188,7 @@ function runtime() {
     app.get("/watchdog/init", function(req, res, next) {
         if (req.query.id && req.query.entity && watchdogs.has(req.query.id) + '') {
             const _watchdog = watchdogs.get(req.query.id + '')
-            if (_watchdog && watchdogsReady.has( `${req.query.id}-${req.query.entity}`)) {
+            if (_watchdog && watchdogsEntities.has( `${req.query.id}-${req.query.entity}`)) {
                 watchdogsReady.set(`${req.query.id}-${req.query.entity}`, new Date().getTime());
                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has initialized!`, "warning");
                 res.status(200)
