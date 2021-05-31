@@ -61,7 +61,7 @@ setTimeout(() => {
         w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startDate); } });
         console.log('Registered Ready Entities')
     })
-}, 5.1 * 60000)
+}, 30.1 * 60000)
 
 const MQServer = `amqp://${systemglobal.MQUsername}:${systemglobal.MQPassword}@${systemglobal.MQServer}/?heartbeat=60`
 const MQWorkerCmd = `command.api.${systemglobal.SystemName}`
