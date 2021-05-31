@@ -241,18 +241,8 @@ function runtime() {
                     const _tS = ((new Date().getTime() - _wS) / 60000).toFixed(2);
                     const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
                     timeStamps += `${_tS}:${_tI} `
-                    if ( !isNaN(_tI) && _tI <= 5) {
-                        statusText += '🔺'
-                        if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
-                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
-                                .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
-                                .then(() => {
-                                    watchdogsDead.set(`${w.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
-                                })
-                        }
-                    } else if ( _tS >= 4.8) {
-                        statusText += '🔴'
+                    if ( _tS >= 4.8) {
+                        statusText += '🟥'
                         if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
                                 .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
@@ -261,8 +251,18 @@ function runtime() {
                                     Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
                                 })
                         }
+                    } else if ( !isNaN(_tI) && _tI <= 30 ) {
+                        statusText += '🟨'
+                        if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
+                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
+                                .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
+                                .then(() => {
+                                    watchdogsDead.set(`${w.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
+                                })
+                        }
                     } else {
-                        statusText += '🟢'
+                        statusText += '🟩'
                         watchdogsDead.delete(`${w.id}-${e}`);
                     }
                 })
