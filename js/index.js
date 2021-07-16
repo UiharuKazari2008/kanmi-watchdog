@@ -288,6 +288,7 @@ function runtime() {
             init = 1;
         }
         updateIndicators();
+        process.send('ready');
     });
     discordClient.on("error", (err) => {
         Logger.printLine("Discord", "Shard Error, Rebooting...", "error", err)
