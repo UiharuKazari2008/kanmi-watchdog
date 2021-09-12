@@ -1,7 +1,7 @@
 const systemglobal = require('../../config.json');
 
 const os = require('os');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const sqlConnection = mysql.createPool({
     host: systemglobal.SQLServer,
     user: systemglobal.SQLUsername,
