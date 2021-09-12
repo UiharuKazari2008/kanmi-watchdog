@@ -237,6 +237,7 @@ function runtime() {
         }
         await watchdogs.forEach(w => {
             let statusText =  `${w.header} `;
+            let statusIcons =  ``;
             let watchDogWarnings = [];
             let watchDogFaults = [];
             let watchDogEntites = [];
@@ -254,7 +255,7 @@ function runtime() {
                     last: _wS
                 })
                 if ( _tS >= 4.8) {
-                    statusText += '🟥'
+                    statusIcons += '🟥'
                     if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
                         discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
                             .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
@@ -265,7 +266,7 @@ function runtime() {
                     }
                     watchDogFaults.push(`🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
                 } else if ( !isNaN(_tI) && _tI <= 30 ) {
-                    statusText += '🟨'
+                    statusIcons += '🟨'
                     if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
                         discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
                             .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
@@ -276,15 +277,17 @@ function runtime() {
                     }
                     watchDogWarnings.push(`🔺 WARNING! Entity ${e}:${w.id} has reset!`)
                 } else {
-                    statusText += '🟩'
+                    statusIcons += '🟩'
                     watchdogsDead.delete(`${w.id}-${e}`);
                 }
             })
+            statusIcons += statusIcons;
             const sqlData = {
                 id: w.id,
                 name: w.name,
                 header: w.header,
                 statusText: statusText,
+                statusIcons: statusIcons,
                 entities: watchDogEntites,
                 wdWarnings: watchDogWarnings,
                 wdFaults: watchDogFaults
