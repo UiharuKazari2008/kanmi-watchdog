@@ -48,6 +48,7 @@ const startDate = new Date().getTime()
 watchdogConfig.Discord_Status.forEach(w => {
     watchdogs.set(w.id, {
         id: w.id,
+        name: w.name,
         channel: w.channel,
         type: w.type,
         header: w.header,
@@ -229,50 +230,79 @@ function runtime() {
         }
     });
 
-    function updateIndicators() {
-        watchdogs.forEach(w => {
-            const _ch = discordClient.getChannel(w.channel)
-            if (_ch && _ch.name) {
-                let statusText =  `${w.header} `;
-                let timeStamps = '';
-                w.entities.forEach(e => {
-                    const _wS = watchdogsEntities.get(`${w.id}-${e}`);
-                    const _iS = watchdogsReady.get(`${w.id}-${e}`);
-                    const _tS = ((new Date().getTime() - _wS) / 60000).toFixed(2);
-                    const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
-                    timeStamps += `${_tS}:${_tI} `
-                    if ( _tS >= 4.8) {
-                        statusText += '🟥'
-                        if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
-                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
-                                .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
-                                .then(() => {
-                                    watchdogsDead.set(`${w.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
-                                })
-                        }
-                    } else if ( !isNaN(_tI) && _tI <= 30 ) {
-                        statusText += '🟨'
-                        if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
-                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
-                                .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
-                                .then(() => {
-                                    watchdogsDead.set(`${w.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
-                                })
-                        }
-                    } else {
-                        statusText += '🟩'
-                        watchdogsDead.delete(`${w.id}-${e}`);
-                    }
+    async function updateIndicators() {
+        const discordChannels = await db.query(`SELECT * FROM discord_status`)
+        if (discordChannels.error) {
+            Logger.printLine("StatusUpdate", `Unable to get status channels for status publishing`, "error", discordChannels.error)
+        }
+        await watchdogs.forEach(w => {
+            let statusText =  `${w.header} `;
+            let watchDogWarnings = [];
+            let watchDogFaults = [];
+            let watchDogEntites = [];
+            w.entities.forEach(e => {
+                // Last Ping
+                const _wS = watchdogsEntities.get(`${w.id}-${e}`);
+                const _tS = ((new Date().getTime() - _wS) / 60000).toFixed(2);
+                // Last Reset
+                const _iS = watchdogsReady.get(`${w.id}-${e}`);
+                const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
+                watchDogEntites.push({
+                    name: e,
+                    ping: _tS,
+                    reset: _tI,
+                    last: _wS
                 })
-                //console.log(`"${_ch.name}" <= "${statusText}" - ${timeStamps}`)
-                if (_ch.name !== statusText) {
+                if ( _tS >= 4.8) {
+                    statusText += '🟥'
+                    if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
+                        discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
+                            .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
+                            .then(() => {
+                                watchdogsDead.set(`${w.id}-${e}`, true);
+                                Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
+                            })
+                    }
+                    watchDogFaults.push(`🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
+                } else if ( !isNaN(_tI) && _tI <= 30 ) {
+                    statusText += '🟨'
+                    if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
+                        discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
+                            .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
+                            .then(() => {
+                                watchdogsDead.set(`${w.id}-${e}`, true);
+                                Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
+                            })
+                    }
+                    watchDogWarnings.push(`🔺 WARNING! Entity ${e}:${w.id} has reset!`)
+                } else {
+                    statusText += '🟩'
+                    watchdogsDead.delete(`${w.id}-${e}`);
+                }
+            })
+            const sqlData = {
+                id: w.id,
+                name: w.name,
+                header: w.header,
+                statusText: statusText,
+                entities: watchDogEntites,
+                wdWarnings: watchDogWarnings,
+                wdFaults: watchDogFaults
+            }
+            db.query(`REPLACE INTO discord_status_records SET ?`, [{
+                name: w.channel,
+                data: JSON.stringify(sqlData)
+            }])
+
+            const _thisChannel = discordChannels.rows.filter(e => e.name === e.channel);
+            if (!discordChannels.error && _thisChannel.length > 0) {
+                const _ch = discordClient.getChannel(_thisChannel[0].channel);
+                if (_ch && _ch.name && _ch.name !== statusText) {
                     discordClient.editChannel(w.channel, { name: statusText}, "Status Update")
                         .catch(err => { mqClient.sendMessage(`Error updating "${w.channel}" status text : ${err.message}`, "err", "StatusUpdate", err); })
+                } else if (!(_ch && _ch.name)){
+                    Logger.printLine("StatusUpdate", `Unable to get status of channel ${w.channel}`, "error")
                 }
-            } else {
-                Logger.printLine("StatusUpdate", `Unable to get status of channel ${w.channel}`, "error")
             }
         })
     }

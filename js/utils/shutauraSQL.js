@@ -13,7 +13,7 @@ const sqlConnection = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 });
-
+const sqlPromise = sqlConnection.promise();
 
 module.exports = function (facility, options) {
     let module = {};
@@ -29,6 +29,26 @@ module.exports = function (facility, options) {
         sqlConnection.query(mysql.format(sql_q, inputs), function (err, rows) {
             callback(err, rows);
         });
+    }
+    module.query = async function (sql_q, inputs) {
+        try {
+            const [rows,fields] = await sqlPromise.query(sql_q, inputs);
+            return {
+                rows, fields, sql_q, inputs
+            }
+        } catch (err) {
+            Logger.printLine("SQL", err.message, "error", err);
+            console.error(sql_q);
+            console.error(inputs);
+            console.error(err);
+            return {
+                rows: [],
+                fields: {},
+                sql_q,
+                inputs,
+                err
+            }
+        }
     }
 
     process.on('uncaughtException', function(err) {
