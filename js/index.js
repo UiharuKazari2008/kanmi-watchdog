@@ -281,7 +281,7 @@ function runtime() {
                     watchdogsDead.delete(`${w.id}-${e}`);
                 }
             })
-            statusIcons += statusIcons;
+            statusText += statusIcons;
             const sqlData = {
                 id: w.id,
                 name: w.name,
