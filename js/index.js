@@ -264,7 +264,7 @@ function runtime() {
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
                             })
                     }
-                    watchDogFaults.push(`🚨 Entity ${e}:${w.id} is not responding!`)
+                    watchDogFaults.push(`Entity ${e}:${w.id} is not responding!`)
                 } else if ( !isNaN(_tI) && _tI <= 30 ) {
                     statusIcons += '🟨'
                     if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
@@ -275,7 +275,7 @@ function runtime() {
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
                             })
                     }
-                    watchDogWarnings.push(`⚠ Entity ${e}:${w.id} has reset!`)
+                    watchDogWarnings.push(`Entity ${e}:${w.id} has reset!`)
                 } else {
                     statusIcons += '🟩'
                     watchdogsDead.delete(`${w.id}-${e}`);
