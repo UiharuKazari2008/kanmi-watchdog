@@ -37,7 +37,6 @@ let init = 0;
 
 const Logger = require('./utils/logSystem')(facilityName);
 const db = require('./utils/shutauraSQL')(facilityName);
-const mqClient = require('./utils/mqClient')(facilityName);
 
 let watchdogs = new Map();
 let watchdogsEntities = new Map();
@@ -64,8 +63,6 @@ setTimeout(() => {
     })
 }, 30.1 * 60000)
 
-const MQServer = `amqp://${systemglobal.MQUsername}:${systemglobal.MQPassword}@${systemglobal.MQServer}/?heartbeat=60`
-const MQWorkerCmd = `command.api.${systemglobal.SystemName}`
 function runtime() {
     Logger.printLine("Discord", "Settings up Discord bot", "debug")
     const discordClient = new eris.CommandClient(systemglobal.Discord_Key, {
@@ -78,88 +75,6 @@ function runtime() {
         prefix: "log ",
         restMode: true,
     });
-
-    // Kanmi MQ Backend
-    function startWorkerCmd() {
-        amqpConn.createChannel(function(err, ch) {
-            if (closeOnErr(err)) return;
-            ch.on("error", function(err) {
-                Logger.printLine("KanmiMQ", "Channel 0 Error (Command)", "error", err)
-            });
-            ch.on("close", function() {
-                Logger.printLine("KanmiMQ", "Channel 0 Closed (Command)", "critical")
-                start();
-            });
-            ch.prefetch(10);
-            ch.assertQueue(MQWorkerCmd, { durable: true }, function(err, _ok) {
-                if (closeOnErr(err)) return;
-                ch.consume(MQWorkerCmd, processMsg, { noAck: true });
-                Logger.printLine("KanmiMQ", "Channel 0 Worker Ready (Command)", "debug")
-            });
-            function processMsg(msg) {
-                workCmd(msg, function(ok) {
-                    try {
-                        if (ok)
-                            ch.ack(msg);
-                        else
-                            ch.reject(msg, true);
-                    } catch (e) {
-                        closeOnErr(e);
-                    }
-                });
-            }
-        });
-    }
-    function workCmd(msg, cb) {
-        let MessageContents = JSON.parse(Buffer.from(msg.content).toString('utf-8'));
-        if (MessageContents.hasOwnProperty('command')) {
-            switch (MessageContents.command) {
-                case 'RESET' :
-                    console.log("================================ RESET SYSTEM ================================ ".bgRed);
-                    cb(true)
-                    process.exit(10);
-                    break;
-                case 'ESTOP':
-                    console.log("================================ EMERGENCY STOP! ================================ ".bgRed);
-                    cb(true)
-                    process.exit(0);
-                    break;
-                default:
-                    Logger.printLine("RemoteCommand", `Unknown Command: ${MessageContents.command}`, "debug");
-                    cb(true)
-            }
-        }
-    }
-
-    function start() {
-        amqp.connect(MQServer, function(err, conn) {
-            if (err) {
-                Logger.printLine("KanmiMQ", "Initialization Error", "critical", err)
-                return setTimeout(start, 1000);
-            }
-            conn.on("error", function(err) {
-                if (err.message !== "Connection closing") {
-                    Logger.printLine("KanmiMQ", "Initialization Connection Error", "emergency", err)
-                }
-            });
-            conn.on("close", function() {
-                Logger.printLine("KanmiMQ", "Attempting to Reconnect...", "debug")
-                return setTimeout(start, 1000);
-            });
-            Logger.printLine("KanmiMQ", `Connected to Kanmi Exchange as ${systemglobal.SystemName}!`, "info")
-            amqpConn = conn;
-            whenConnected();
-        });
-    }
-    function closeOnErr(err) {
-        if (!err) return false;
-        Logger.printLine("KanmiMQ", "Connection Closed due to error", "error", err)
-        amqpConn.close();
-        return true;
-    }
-    function whenConnected() {
-        startWorkerCmd();
-    }
 
     app.use(express.json({limit: '20mb'}));
     app.use(express.urlencoded({extended : true, limit: '20mb'}));
@@ -258,7 +173,7 @@ function runtime() {
                     statusIcons += '🟥'
                     if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
                         discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
-                            .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
+                            .catch(err => { Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err) })
                             .then(() => {
                                 watchdogsDead.set(`${w.id}-${e}`, true);
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
@@ -269,7 +184,7 @@ function runtime() {
                     statusIcons += '🟨'
                     if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
                         discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
-                            .catch(err => { mqClient.sendMessage(`Error sending message for alarm : ${err.message}`, "err", "StatusUpdate", err); })
+                            .catch(err => { Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err) })
                             .then(() => {
                                 watchdogsDead.set(`${w.id}-${e}`, true);
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
@@ -292,17 +207,14 @@ function runtime() {
                 wdWarnings: watchDogWarnings,
                 wdFaults: watchDogFaults
             }
-            db.query(`REPLACE INTO discord_status_records SET ?`, [{
-                name: w.channel,
-                data: JSON.stringify(sqlData)
-            }])
+            db.query(`REPLACE INTO discord_status_records SET name = ?, data = ?`, [w.channel, JSON.stringify(sqlData)])
 
             const _thisChannel = discordChannels.rows.filter(e => e.name === e.channel);
             if (!discordChannels.error && _thisChannel.length > 0) {
                 const _ch = discordClient.getChannel(_thisChannel[0].channel);
                 if (_ch && _ch.name && _ch.name !== statusText) {
                     discordClient.editChannel(w.channel, { name: statusText}, "Status Update")
-                        .catch(err => { mqClient.sendMessage(`Error updating "${w.channel}" status text : ${err.message}`, "err", "StatusUpdate", err); })
+                        .catch(err => { Logger.printLine("StatusUpdate", `Error updating "${w.channel}" status text : ${err.message}`, "error", err); })
                 } else if (!(_ch && _ch.name)){
                     Logger.printLine("StatusUpdate", `Unable to get status of channel ${w.channel}`, "error")
                 }
