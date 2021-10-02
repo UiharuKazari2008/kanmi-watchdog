@@ -34,7 +34,7 @@ const RateLimiter = require('limiter').RateLimiter;
 const limiter1 = new RateLimiter(5, 250);
 const cron = require('node-cron');
 let init = 0;
-const bootTime = Date.now().valueOf()
+const bootTime = (Date.now().valueOf() / 1000).toFixed(0)
 
 const Logger = require('./utils/logSystem')(facilityName);
 const db = require('./utils/shutauraSQL')(facilityName);
@@ -183,7 +183,7 @@ function runtime() {
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
                             })
                     }
-                    watchDogFaults.push(`Entity ${e}:${w.id} has not been online sense <t:${_wS}:R>`)
+                    watchDogFaults.push(`Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if ( !isNaN(_tI) && _tI <= 30 ) {
                     statusIcons += '🟨'
                     if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
@@ -194,7 +194,7 @@ function runtime() {
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
                             })
                     }
-                    watchDogWarnings.push(`Entity ${e}:${w.id} reset <t:${_wS}:R>`)
+                    watchDogWarnings.push(`Entity ${e}:${w.id} reset <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else {
                     statusIcons += '🟩'
                     watchdogsDead.delete(`${w.id}-${e}`);
