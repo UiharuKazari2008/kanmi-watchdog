@@ -196,7 +196,7 @@ function runtime() {
                                 Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
                             })
                     }
-                    watchDogWarnings.push(`Entity ${e}:${w.id} reset <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    watchDogWarnings.push(`Entity ${e}:${w.id} reset <t:${(_tI / 1000).toFixed(0)}:R>`)
                 } else {
                     statusIcons += '🟩'
                     watchdogsDead.delete(`${w.id}-${e}`);
