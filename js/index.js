@@ -157,7 +157,7 @@ function runtime() {
             let watchDogWarnings = [];
             let watchDogFaults = [];
             let watchDogEntites = [];
-            if (i === 0 && process.uptime() <= 5 * 60 * 1000) {
+            if (i === 0 && process.uptime() <= 15 * 60 * 1000) {
                 watchDogWarnings.push(`Watchdog system was reset <t:${bootTime}:R>!`)
             }
             w.entities.forEach(e => {
