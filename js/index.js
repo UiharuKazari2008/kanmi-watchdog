@@ -34,6 +34,7 @@ const RateLimiter = require('limiter').RateLimiter;
 const limiter1 = new RateLimiter(5, 250);
 const cron = require('node-cron');
 let init = 0;
+const bootTime = Date.now().valueOf()
 
 const Logger = require('./utils/logSystem')(facilityName);
 const db = require('./utils/shutauraSQL')(facilityName);
@@ -156,6 +157,9 @@ function runtime() {
             let watchDogWarnings = [];
             let watchDogFaults = [];
             let watchDogEntites = [];
+            if (process.uptime() <= 5 * 60 * 1000) {
+                watchDogWarnings.push(`Watchdog system was reset <t:${bootTime}:R>!`)
+            }
             w.entities.forEach(e => {
                 // Last Ping
                 const _wS = watchdogsEntities.get(`${w.id}-${e}`);
