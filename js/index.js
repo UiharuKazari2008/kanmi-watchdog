@@ -151,13 +151,13 @@ function runtime() {
         if (discordChannels.error) {
             Logger.printLine("StatusUpdate", `Unable to get status channels for status publishing`, "error", discordChannels.error)
         }
-        await watchdogs.forEach((w,i) => {
+        await watchdogs.forEach(w => {
             let statusText =  `${w.header} `;
             let statusIcons =  ``;
             let watchDogWarnings = [];
             let watchDogFaults = [];
             let watchDogEntites = [];
-            if (i === 0 && process.uptime() <= 15 * 60 * 1000) {
+            if (process.uptime() <= 15 * 60 * 1000) {
                 watchDogWarnings.push(`Watchdog system was reset <t:${bootTime}:R>!`)
             }
             w.entities.forEach(e => {
