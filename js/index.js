@@ -92,7 +92,7 @@ function runtime() {
             const _watchdog = watchdogs.get(req.query.id + '')
             if (_watchdog && watchdogsEntities.has( `${req.query.id}-${req.query.entity}`)) {
                 watchdogsEntities.set(`${req.query.id}-${req.query.entity}`, new Date().getTime());
-                res.status(200)
+                res.status(200).send('Pong');
             } else {
                 res.status(404).send('Entity not found');
             }
@@ -108,7 +108,7 @@ function runtime() {
             if (_watchdog && watchdogsEntities.has( `${req.query.id}-${req.query.entity}`)) {
                 watchdogsReady.set(`${req.query.id}-${req.query.entity}`, new Date().getTime());
                 Logger.printLine("StatusUpdate", `Entity ${req.query.entity}:${req.query.id} has initialized!`, "warning");
-                res.status(200)
+                res.status(200).send('Ok')
             } else {
                 res.status(404).send('Entity not found');
             }
