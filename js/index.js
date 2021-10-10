@@ -154,43 +154,52 @@ function runtime() {
                 addUptimeWarning = true
             }
             w.entities.forEach(e => {
-                // Last Ping
-                const _wS = watchdogsEntities.get(`${w.id}-${e}`);
-                const _tS = ((new Date().getTime() - _wS) / 60000).toFixed(2);
-                // Last Reset
-                const _iS = watchdogsReady.get(`${w.id}-${e}`);
-                const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
-                watchDogEntites.push({
-                    name: e,
-                    ping: _tS,
-                    reset: _tI,
-                    last: _wS
-                })
-                if ( _tS >= 4.8) {
-                    statusIcons += '🟥'
-                    if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
-                        discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
-                            .catch(err => { Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err) })
-                            .then(() => {
-                                watchdogsDead.set(`${w.id}-${e}`, true);
-                                Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
-                            })
+                if (e.startsWith("_")) {
+                    statusIcons += e.substring(1)
+                }
+                else {
+                    // Last Ping
+                    const _wS = watchdogsEntities.get(`${w.id}-${e}`);
+                    const _tS = ((new Date().getTime() - _wS) / 60000).toFixed(2);
+                    // Last Reset
+                    const _iS = watchdogsReady.get(`${w.id}-${e}`);
+                    const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
+                    watchDogEntites.push({
+                        name: e,
+                        ping: _tS,
+                        reset: _tI,
+                        last: _wS
+                    })
+                    if (_tS >= 4.8) {
+                        statusIcons += '🟥'
+                        if (!watchdogsDead.has(`${w.id}-${e}`)) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🔻 ALARM! Entity ${e}:${w.id} may be dead!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`${w.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
+                                })
+                        }
+                        watchDogFaults.push(`Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    } else if (!isNaN(_tI) && _tI <= 30) {
+                        statusIcons += '🟨'
+                        if (!watchdogsDead.has(`${w.id}-${e}`)) {
+                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`${w.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
+                                })
+                        }
+                        watchDogWarnings.push(`Entity ${e}:${w.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
+                    } else {
+                        statusIcons += '🟩'
+                        watchdogsDead.delete(`${w.id}-${e}`);
                     }
-                    watchDogFaults.push(`Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
-                } else if ( !isNaN(_tI) && _tI <= 30 ) {
-                    statusIcons += '🟨'
-                    if ( !watchdogsDead.has(`${w.id}-${e}`) ) {
-                        discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `🔺 WARNING! Entity ${e}:${w.id} has reset!`)
-                            .catch(err => { Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err) })
-                            .then(() => {
-                                watchdogsDead.set(`${w.id}-${e}`, true);
-                                Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
-                            })
-                    }
-                    watchDogWarnings.push(`Entity ${e}:${w.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
-                } else {
-                    statusIcons += '🟩'
-                    watchdogsDead.delete(`${w.id}-${e}`);
                 }
             })
             statusText += statusIcons;
