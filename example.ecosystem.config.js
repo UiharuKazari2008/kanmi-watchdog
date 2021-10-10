@@ -2,12 +2,10 @@ module.exports = {
     apps : [
         {
             name   : "Watchdog",
-            namespace: "seq-0",
+            namespace: "seq-min",
             script : "./js/index.js",
             watch: ['js'],
             watch_delay: 1000,
-            args   : "",
-            instances: 1,
             cron_restart: '0 0 * * *',
             stop_exit_codes: [0],
             restart_delay: 5000,
