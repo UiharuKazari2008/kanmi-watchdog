@@ -2,7 +2,7 @@ module.exports = {
     apps : [
         {
             name   : "Watchdog",
-            namespace: "seq-min",
+            namespace: "june-mon",
             script : "./js/index.js",
             watch: ['js'],
             watch_delay: 1000,
