@@ -44,26 +44,6 @@ let watchdogsEntities = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
 
-const startDate = new Date().getTime()
-watchdogConfig.Discord_Status.forEach(w => {
-    watchdogs.set(w.id, {
-        id: w.id,
-        name: w.name,
-        channel: w.channel,
-        type: w.type,
-        header: w.header,
-        entities: w.watchdogs
-    });
-    w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startDate); });
-    console.log('Registered Entities')
-})
-setTimeout(() => {
-    watchdogConfig.Discord_Status.forEach(w => {
-        w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startDate); } });
-        console.log('Registered Ready Entities')
-    })
-}, 30.1 * 60000)
-
 function runtime() {
     Logger.printLine("Discord", "Settings up Discord bot", "debug")
     const discordClient = new eris.CommandClient(systemglobal.Discord_Key, {
@@ -73,9 +53,20 @@ function runtime() {
         name: "Kanmi Log",
         description: "Log and Watchdog Framework",
         owner: "Yukimi Kazari",
-        prefix: "log ",
+        prefix: "!watchdog ",
         restMode: true,
     });
+
+    discordClient.registerCommand("reset", function (msg,args) {
+        w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, new Date().getTime()); } })
+        return "All Entities have been reset!"
+    },{
+        argsRequired: true,
+        caseInsensitive: true,
+        description: "Reset Alarms",
+        fullDescription: "Resets all active alarms and warnings",
+        guildOnly: true
+    })
 
     app.use(express.json({limit: '20mb'}));
     app.use(express.urlencoded({extended : true, limit: '20mb'}));
@@ -227,7 +218,28 @@ function runtime() {
             }
         })
     }
+    function registerEntities() {
+        watchdogConfig.Discord_Status.forEach(w => {
+            watchdogs.set(w.id, {
+                id: w.id,
+                name: w.name,
+                channel: w.channel,
+                type: w.type,
+                header: w.header,
+                entities: w.watchdogs
+            });
+            w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, new Date().getTime()); });
+            console.log('Registered Entities')
+        })
+    }
 
+    registerEntities();
+    setTimeout(() => {
+        watchdogConfig.Discord_Status.forEach(w => {
+            w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, new Date().getTime()); } });
+            console.log('Registered Ready Entities')
+        })
+    }, 30.1 * 60000)
     setInterval(updateIndicators, 60000);
     discordClient.on("ready", () => {
         Logger.printLine("Discord", "Connected successfully to Discord!", "debug");
