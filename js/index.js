@@ -39,6 +39,8 @@ const bootTime = (Date.now().valueOf() / 1000).toFixed(0)
 const Logger = require('./utils/logSystem')(facilityName);
 const db = require('./utils/shutauraSQL')(facilityName);
 
+const startTime = new Date().getTime();
+
 let watchdogs = new Map();
 let watchdogsEntities = new Map();
 let watchdogsReady = new Map();
@@ -237,7 +239,7 @@ function runtime() {
                 header: w.header,
                 entities: w.watchdogs
             });
-            w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, new Date().getTime()); });
+            w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startTime); });
             console.log('Registered Entities')
         })
     }
@@ -245,7 +247,7 @@ function runtime() {
     registerEntities();
     setTimeout(() => {
         watchdogConfig.Discord_Status.forEach(w => {
-            w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, new Date().getTime()); } });
+            w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startTime); } });
             console.log('Registered Ready Entities')
         })
     }, 30.1 * 60000)
