@@ -1,6 +1,6 @@
 {
   "name": "kanmi-watchdog",
-  "version": "1.2",
+  "version": "1.2.0",
   "dependencies": {
     "amqplib": "^0.8.0",
     "colors": "^1.4.0",
