@@ -339,6 +339,8 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             embed.thumbnail = {
                 "url": systemglobal.embed_icon
             }
+        } else {
+            embed.thumbnail = undefined;
         }
 
         if (input && input.warnings.length > 0) {
