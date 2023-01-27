@@ -340,7 +340,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
                 "url": systemglobal.embed_icon
             }
         } else {
-            embed.thumbnail = undefined;
+            delete embed.thumbnail;
         }
 
         if (input && input.warnings.length > 0) {
