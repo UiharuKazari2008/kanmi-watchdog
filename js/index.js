@@ -187,12 +187,13 @@ async function updateIndicators() {
         Logger.printLine("StatusUpdate", `Unable to get status channels for status publishing`, "error", discordChannels.error)
     }
     let addUptimeWarning = false;
+    let watchDogWarnings = [];
+    let watchDogFaults = [];
+    let watchDogEntites = [];
     await watchdogs.forEach(w => {
         let statusText =  `${w.header} `;
         let statusIcons =  ``;
-        let watchDogWarnings = [];
-        let watchDogFaults = [];
-        let watchDogEntites = [];
+
         if (!addUptimeWarning && process.uptime() <= 15 * 60) {
             watchDogWarnings.push(`🔕 Watchdog system was reset <t:${bootTime}:R>!`)
             addUptimeWarning = true
@@ -208,7 +209,6 @@ async function updateIndicators() {
                 // Last Reset
                 const _iS = watchdogsReady.get(`${w.id}-${e}`);
                 const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
-                watchDogEntites.push(`${w.header}${e}: ${statusIcons}`);
                 if (_tS >= 4.8) {
                     statusIcons += '🟥'
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
@@ -241,6 +241,7 @@ async function updateIndicators() {
                 }
             }
         })
+        watchDogEntites.push(`${w.header}${w.name}: ${statusIcons}`);
         statusText += statusIcons;
 
         const _thisChannel = discordChannels.rows.filter(e => e.name === e.channel);
@@ -254,22 +255,22 @@ async function updateIndicators() {
             }
         }
 
-        localParameters.keys().then((localKeys) => {
-            discordClient.getRESTGuilds()
-                .then(function (guilds) {
-                    guilds.forEach(function (guild) {
-                        if (localKeys.indexOf("statusgen-" + guild.id) !== -1 ) {
-                            updateStatus({
-                                status: watchDogEntites,
-                                warnings: watchDogWarnings,
-                                faults: watchDogFaults
-                            }, true, guild.id)
-                        }
-                    })
-                })
-        });
+
     })
-}
+    localParameters.keys().then((localKeys) => {
+        discordClient.getRESTGuilds()
+            .then(function (guilds) {
+                guilds.forEach(function (guild) {
+                    if (localKeys.indexOf("statusgen-" + guild.id) !== -1 ) {
+                        updateStatus({
+                            status: watchDogEntites,
+                            warnings: watchDogWarnings,
+                            faults: watchDogFaults
+                        }, true, guild.id)
+                    }
+                })
+            })
+    });}
 function registerEntities() {
     watchdogConfig.Discord_Status.forEach(w => {
         watchdogs.set(w.id, {
