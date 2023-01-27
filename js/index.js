@@ -414,7 +414,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             }
         } else {
             discordClient.createMessage(channel, {
-                embeds: [embed, ...embdedArray]
+                embeds: [embed]
             })
                 .then(async msg => {
                     await localParameters.setItem('statusgen-' + guildID, {
