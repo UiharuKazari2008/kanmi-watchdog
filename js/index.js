@@ -64,7 +64,6 @@ let watchdogs = new Map();
 let watchdogsEntities = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
-let previousStatusObjects = new Map();
 
 Logger.printLine("Discord", "Settings up Discord bot", "debug")
 const discordClient = new eris.CommandClient(systemglobal.Discord_Key, {
@@ -374,50 +373,22 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
         }
 
         if (data && data.message && !channelID) {
-            function haveSameData(o1, o2) {
-                if (!o1 || !o1.fields)
-                    return false;
-                if (!o2 || !o2.fields)
-                    return false;
-                const fo1 = clone(o1.fields.filter(e => !e.name.includes('Uptime')));
-                const fo2 = clone(o2.fields.filter(e => !e.name.includes('Uptime')));
-
-                if (fo1.length === fo2.length) {
-                    //console.log(fo1.map((e,i) => `${e.value === fo2[i].value} / ${e.value} / ${fo2[i].value }`))
-                    return (fo1.map((e, i) => `${e.value}` === `${fo2[i].value}`).filter(e => e !== true).length === 0) && o1.color === o2.color
-                }
-                return false;
-            }
-
-            const lastEmbeds = (previousStatusObjects.has(guildID)) ? previousStatusObjects.get(guildID) : false
-            const finalEmbeds = [embed];
-            let diffData = [];
-            if (lastEmbeds) {
-                diffData = finalEmbeds.map((e, i) => (haveSameData(e, lastEmbeds[i]))).filter(e => e === false)
-            }
-
-            if (forceUpdate || !lastEmbeds || finalEmbeds.length !== lastEmbeds.length || diffData.length > 0) {
-                console.log(`Updating data...`);
-                discordClient.editMessage(channel, data.message, {
-                    embeds: finalEmbeds
-                })
-                    .then(msg => {
-                        localParameters.setItem('statusgen-' + guildID, {
-                            channel: msg.channel.id,
-                            message: msg.id,
-                        })
-                        previousStatusObjects.set(guildID, msg.embeds);
+            discordClient.editMessage(channel, data.message, {
+                embeds: embed
+            })
+                .then(msg => {
+                    localParameters.setItem('statusgen-' + guildID, {
+                        channel: msg.channel.id,
+                        message: msg.id,
                     })
-                    .catch(e => {
-                        console.error(e)
-                    });
-            } else {
-                console.log(`Update skipped ${forceUpdate} || ${!lastEmbeds} || ${finalEmbeds.length !== lastEmbeds.length} || ${diffData.length > 0}`);
-            }
+                })
+                .catch(e => {
+                    console.error(e)
+                });
         } else {
             console.log(embed)
             discordClient.createMessage(channel, {
-                embeds: [embed]
+                embeds: embed
             })
                 .then(async msg => {
                     await localParameters.setItem('statusgen-' + guildID, {
