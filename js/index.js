@@ -92,7 +92,7 @@ discordClient.registerCommand("status", async function (msg,args) {
     if (args.length > 0) {
         switch (args[0]) {
             case 'enable':
-                generateStatus(true, msg.guildID, args[1].replace("<#", "").replace(">", ""));
+                updateStatus(undefined, true, msg.guildID, args[1].replace("<#", "").replace(">", ""));
                 return `Added a insights display to <#${args[1].replace("<#", "").replace(">", "")}>`
             case 'disable':
                 await localParameters.del(`statusgen-${msg.guildID}`)
