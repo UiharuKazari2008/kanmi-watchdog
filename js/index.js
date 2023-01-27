@@ -397,7 +397,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             if (forceUpdate || !lastEmbeds || finalEmbeds.length !== lastEmbeds.length || diffData.length > 0) {
                 console.log(`Updating data...`);
                 discordClient.editMessage(channel, data.message, {
-                    embeds: embed
+                    embeds: finalEmbeds
                 })
                     .then(msg => {
                         localParameters.setItem('statusgen-' + guildID, {
@@ -413,8 +413,9 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
                 console.log(`Update skipped ${forceUpdate} || ${!lastEmbeds} || ${finalEmbeds.length !== lastEmbeds.length} || ${diffData.length > 0}`);
             }
         } else {
+            console.log(embed)
             discordClient.createMessage(channel, {
-                embeds: embed
+                embeds: [embed]
             })
                 .then(async msg => {
                     await localParameters.setItem('statusgen-' + guildID, {
