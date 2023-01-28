@@ -249,14 +249,18 @@ async function updateIndicators() {
                 if (res.packetLoss === 100) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
-                        discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
-                            .catch(err => {
-                                Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
-                            })
-                            .then(() => {
-                                watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
-                                Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
-                            })
+                        if (!host.no_notify_on_fail) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                })
+                        } else {
+                            watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                        }
                     }
                     watchDogFaults.push(`🚨 ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                 } else if (res.packetLoss > 0) {
@@ -264,6 +268,18 @@ async function updateIndicators() {
                     watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
                 } else {
                     pingResults.ping(`🟩 ${host.name}`);
+                    if (watchdogsDead.has(`ping-${host.ip}`)) {
+                        if (!host.no_notify_on_success) {
+                            discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                })
+                        }
+                    }
                     watchdogsDead.delete(`ping-${host.ip}`);
                 }
                 ok();
