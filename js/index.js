@@ -33,6 +33,7 @@ const http = require('http').createServer(app).listen(7950, (systemglobal.interf
 const RateLimiter = require('limiter').RateLimiter;
 const limiter1 = new RateLimiter(5, 250);
 const cron = require('node-cron');
+const ping = require('ping');
 let init = 0;
 const bootTime = (Date.now().valueOf() / 1000).toFixed(0)
 const storageHandler = require('node-persist');
@@ -56,7 +57,6 @@ localParameters.init((err) => {
 });
 
 const Logger = require('./utils/logSystem')(facilityName);
-const db = require('./utils/shutauraSQL')(facilityName);
 
 const startTime = new Date().getTime();
 let activeRefresh = false;
@@ -182,18 +182,12 @@ app.get("/watchdog/get", function(req, res, next) {
 });
 
 async function updateIndicators() {
-    const discordChannels = await db.query(`SELECT * FROM discord_status`)
-    if (discordChannels.error) {
-        Logger.printLine("StatusUpdate", `Unable to get status channels for status publishing`, "error", discordChannels.error)
-    }
     let addUptimeWarning = false;
     let watchDogWarnings = [];
     let watchDogFaults = [];
     let watchDogEntites = [];
     await watchdogs.forEach(w => {
-        let statusText =  `${w.header} `;
         let statusIcons =  ``;
-
         if (!addUptimeWarning && process.uptime() <= 15 * 60) {
             watchDogWarnings.push(`🔕 Watchdog system was reset <t:${bootTime}:R>!`)
             addUptimeWarning = true
@@ -242,21 +236,45 @@ async function updateIndicators() {
             }
         })
         watchDogEntites.push(`${w.header}${w.name}: ${statusIcons}`);
-        statusText += statusIcons;
-
-        const _thisChannel = discordChannels.rows.filter(e => e.name === e.channel);
-        if (!discordChannels.error && _thisChannel.length > 0) {
-            const _ch = discordClient.getChannel(_thisChannel[0].channel);
-            if (_ch && _ch.name && _ch.name !== statusText) {
-                discordClient.editChannel(w.channel, { name: statusText}, "Status Update")
-                    .catch(err => { Logger.printLine("StatusUpdate", `Error updating "${w.channel}" status text : ${err.message}`, "error", err); })
-            } else if (!(_ch && _ch.name)){
-                Logger.printLine("StatusUpdate", `Unable to get status of channel ${w.channel}`, "error")
-            }
-        }
-
-
     })
+    let pingResults = [];
+    if (watchdogConfig.Ping_Hosts) {
+        let listRequests = Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
+            return promiseChain.then(() => new Promise(async (ok) => {
+                let res = await ping.promise.probe(host.ip, {
+                    timeout: host.timeout || 5,
+                    extra: ['-i', '3'],
+                });
+                const _wS = watchdogsDead.get(`ping-${host.ip}`);
+                if (res.packetLoss === 100) {
+                    pingResults.push(`🟥 ${host.name}`);
+                    if (!watchdogsDead.has(`ping-${host.ip}`)) {
+                        discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
+                            .catch(err => {
+                                Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                            })
+                            .then(() => {
+                                watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                                Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                            })
+                    }
+                    watchDogFaults.push(`🚨 ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                } else if (res.packetLoss > 0) {
+                    pingResults.ping(`🟨 ${host.name}`);
+                    watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
+                } else {
+                    pingResults.ping(`🟩 ${host.name}`);
+                    watchdogsDead.delete(`ping-${host.ip}`);
+                }
+                ok();
+            }))
+        }, Promise.resolve());
+        listRequests.then(async (ok) => {
+            if (pingResults.length > 0) {
+
+            }
+        })
+    }
     localParameters.keys().then((localKeys) => {
         discordClient.getRESTGuilds()
             .then(function (guilds) {
@@ -264,6 +282,7 @@ async function updateIndicators() {
                     if (localKeys.indexOf("statusgen-" + guild.id) !== -1 ) {
                         updateStatus({
                             status: watchDogEntites,
+                            pings: pingResults,
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
                         }, true, guild.id)
@@ -362,6 +381,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             embed.fields.push({
                 "name": `🚥 Service Watchdog`,
                 "value": `${input.status.join('\n')}`.substring(0, 1024)
+            })
+        }
+        if (input && input.pings.length > 0) {
+            embed.fields.push({
+                "name": `📡 Link Status`,
+                "value": `${input.pings.join('\n')}`.substring(0, 1024)
             })
         }
 
