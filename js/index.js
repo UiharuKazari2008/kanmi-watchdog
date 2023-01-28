@@ -26,13 +26,10 @@ const facilityName = 'Discord-Watchdog';
 
 const eris = require('eris');
 const colors = require('colors');
-const amqp = require('amqplib/callback_api');
 const express = require("express");
 const app = express();
 const http = require('http').createServer(app).listen(7950, (systemglobal.interface) ? systemglobal.interface : "0.0.0.0");
 const RateLimiter = require('limiter').RateLimiter;
-const limiter1 = new RateLimiter(5, 250);
-const cron = require('node-cron');
 const ping = require('ping');
 let init = 0;
 const bootTime = (Date.now().valueOf() / 1000).toFixed(0)
@@ -314,25 +311,6 @@ function registerEntities() {
         w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startTime); });
         console.log('Registered Entities')
     })
-}
-
-function convertMBtoText(value, noUnit) {
-    const diskValue = parseFloat(value.toString());
-    if (diskValue >= 1000000) {
-        return `${(diskValue / (1024 * 1024)).toFixed(1)}${(noUnit) ? '' : ' TB'}`
-    } else if (diskValue >= 1000) {
-        return `${(diskValue / 1024).toFixed(1)}${(noUnit) ? '' : ' GB'}`
-    } else {
-        return `${diskValue.toFixed(1)}${(noUnit) ? '' : ' MB'}`
-    }
-}
-function clone(obj) {
-    if (null == obj || "object" != typeof obj) return obj;
-    let copy = obj.constructor();
-    for (let attr in obj) {
-        if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
-    }
-    return copy;
 }
 async function updateStatus(input, forceUpdate, guildID, channelID) {
     if (!activeRefresh) {
