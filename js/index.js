@@ -239,7 +239,7 @@ async function updateIndicators() {
     })
     let pingResults = [];
     if (watchdogConfig.Ping_Hosts) {
-        let listRequests = Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
+        await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
                 let res = await ping.promise.probe(host.ip, {
                     timeout: host.timeout || 5,
@@ -285,11 +285,6 @@ async function updateIndicators() {
                 ok();
             }))
         }, Promise.resolve());
-        listRequests.then(async (ok) => {
-            if (pingResults.length > 0) {
-
-            }
-        })
     }
     localParameters.keys().then((localKeys) => {
         discordClient.getRESTGuilds()
