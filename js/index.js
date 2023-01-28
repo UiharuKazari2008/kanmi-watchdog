@@ -264,10 +264,10 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`🚨 ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                 } else if (res.packetLoss > 0) {
-                    pingResults.ping(`🟨 ${host.name}`);
+                    pingResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
                 } else {
-                    pingResults.ping(`🟩 ${host.name}`);
+                    pingResults.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_success) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
