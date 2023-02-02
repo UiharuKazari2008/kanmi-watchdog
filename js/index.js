@@ -272,7 +272,7 @@ async function updateIndicators() {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                 })
                                 .then(() => {
-                                    watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                                    watchdogsDead.delete(`ping-${host.ip}`);
                                     Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
                                 })
                         }
@@ -351,6 +351,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             delete embed.thumbnail;
         }
 
+        if (input && input.warnings.length === 0 && input.faults.length === 0) {
+            embed.fields.unshift({
+                "name": `🏁 Overall Status`,
+                "value": '✅ All system are responding normally'
+            })
+        }
         if (input && input.warnings.length > 0) {
             embed.color = 16771840
             embed.fields.unshift({
