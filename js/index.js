@@ -370,30 +370,27 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             delete embed.thumbnail;
         }
 
-        if (alarminhibited) {
-            embed.fields.unshift({
-                "name": `🚨 Alarm Status`,
-                "value": '⚠ Alarms are inhibited! Please re-enable!'
-            })
-        }
-        if (input && input.warnings.length === 0 && input.faults.length === 0) {
-            embed.fields.unshift({
-                "name": `🏁 Overall Status`,
-                "value": '✅ All system are responding normally'
-            })
-        }
-        if (input && input.warnings.length > 0) {
+        let warnings = []
+        let faults = []
+        if (input && input.warnings.length > 0)
+            warnings = input.warnings;
+        if (input && input.faults.length > 0)
+            faults = input.faults;
+        if (alarminhibited)
+            warnings.push('⚠ Alarms are inhibited! Please re-enable!');
+
+        if (warnings.length > 0) {
             embed.color = 16771840
             embed.fields.unshift({
                 "name": `⚠ Active Warnings`,
-                "value": input.warnings.join('\n').substring(0, 1024)
+                "value": warnings.join('\n').substring(0, 1024)
             })
         }
-        if (input && input.faults.length > 0) {
+        if (faults.length > 0) {
             embed.color = 16711680
             embed.fields.unshift({
                 "name": `⛔ Active Alarms`,
-                "value": input.faults.join('\n').substring(0, 1024)
+                "value": faults.join('\n').substring(0, 1024)
             })
         }
 
