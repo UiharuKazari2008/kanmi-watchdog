@@ -61,6 +61,7 @@ let watchdogs = new Map();
 let watchdogsEntities = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
+let alarminhibited = false;
 
 Logger.printLine("Discord", "Settings up Discord bot", "debug")
 const discordClient = new eris.CommandClient(systemglobal.Discord_Key, {
@@ -82,6 +83,16 @@ discordClient.registerCommand("reset", function (msg,args) {
     caseInsensitive: true,
     description: "Reset Alarms",
     fullDescription: "Resets all active alarms and warnings",
+    guildOnly: true
+})
+discordClient.registerCommand("inhibit", function (msg,args) {
+    alarminhibited = !!alarminhibited;
+    return `Alarms are ${((alarminhibited) ? 'disabled, dashboard will still update!' : 'enabled!')}`
+},{
+    argsRequired: true,
+    caseInsensitive: true,
+    description: "Inhibit All Alarms",
+    fullDescription: "Disables all alarms and warnings",
     guildOnly: true
 })
 discordClient.registerCommand("status", async function (msg,args) {
@@ -203,27 +214,35 @@ async function updateIndicators() {
                 if (_tS >= 4.8) {
                     statusIcons += '🟥'
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
-                        discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ALARM! Entity ${e}:${w.id} may be dead!`)
-                            .catch(err => {
-                                Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
-                            })
-                            .then(() => {
-                                watchdogsDead.set(`${w.id}-${e}`, true);
-                                Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
-                            })
+                        if (!alarminhibited) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ALARM! Entity ${e}:${w.id} may be dead!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`${w.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
+                                })
+                        } else {
+                            watchdogsDead.set(`${w.id}-${e}`, true);
+                        }
                     }
                     watchDogFaults.push(`🚨 Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     statusIcons += '🟨'
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
-                        discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! Entity ${e}:${w.id} has reset!`)
-                            .catch(err => {
-                                Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
-                            })
-                            .then(() => {
-                                watchdogsDead.set(`${w.id}-${e}`, true);
-                                Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
-                            })
+                        if (!alarminhibited) {
+                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! Entity ${e}:${w.id} has reset!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`${w.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
+                                })
+                        } else {
+                            watchdogsDead.set(`${w.id}-${e}`, true);
+                        }
                     }
                     watchDogWarnings.push(`♻️ Entity ${e}:${w.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
                 } else {
@@ -246,7 +265,7 @@ async function updateIndicators() {
                 if (parseFloat(res.packetLoss) === 100) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
-                        if (!host.no_notify_on_fail) {
+                        if (!host.no_notify_on_fail && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
@@ -266,7 +285,7 @@ async function updateIndicators() {
                 } else {
                     pingResults.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`ping-${host.ip}`)) {
-                        if (!host.no_notify_on_success) {
+                        if (!host.no_notify_on_success && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
