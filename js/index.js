@@ -243,7 +243,7 @@ async function updateIndicators() {
                     extra: ['-i', '3'],
                 });
                 const _wS = watchdogsDead.get(`ping-${host.ip}`);
-                if (res.packetLoss === 100) {
+                if (res.packetLoss === 1) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail) {
