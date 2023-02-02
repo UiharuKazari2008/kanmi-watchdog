@@ -243,7 +243,7 @@ async function updateIndicators() {
                     extra: ['-i', '3'],
                 });
                 const _wS = watchdogsDead.get(`ping-${host.ip}`);
-                if (res.packetLoss === 1) {
+                if (parseFloat(res.packetLoss) === 100) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail) {
@@ -260,7 +260,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`🚨 ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                } else if (res.packetLoss > 0) {
+                } else if (parseFloat(res.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
                 } else {
