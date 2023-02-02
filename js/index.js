@@ -86,7 +86,7 @@ discordClient.registerCommand("reset", function (msg,args) {
     guildOnly: true
 })
 discordClient.registerCommand("inhibit", function (msg,args) {
-    alarminhibited = !!alarminhibited;
+    alarminhibited = (!alarminhibited);
     return `Alarms are ${((alarminhibited) ? 'disabled, dashboard will still update!' : 'enabled!')}`
 },{
     argsRequired: false,
