@@ -89,8 +89,8 @@ discordClient.registerCommand("inhibit", function (msg,args) {
     alarminhibited = !!alarminhibited;
     return `Alarms are ${((alarminhibited) ? 'disabled, dashboard will still update!' : 'enabled!')}`
 },{
-    argsRequired: true,
-    caseInsensitive: true,
+    argsRequired: false,
+    caseInsensitive: false,
     description: "Inhibit All Alarms",
     fullDescription: "Disables all alarms and warnings",
     guildOnly: true
