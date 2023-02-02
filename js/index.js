@@ -370,6 +370,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             delete embed.thumbnail;
         }
 
+        if (alarminhibited) {
+            embed.fields.unshift({
+                "name": `🚨 Alarm Status`,
+                "value": '⚠ Alarms are inhibited! Please re-enable!'
+            })
+        }
         if (input && input.warnings.length === 0 && input.faults.length === 0) {
             embed.fields.unshift({
                 "name": `🏁 Overall Status`,
