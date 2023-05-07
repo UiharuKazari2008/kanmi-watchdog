@@ -199,6 +199,7 @@ app.get("/cluster/ping", function(req, res, next) {
         let _active = clusterActive.get(req.query.id + '')
         if (!_active) {
             clusterActive.set(req.query.id + '', req.query.entity + '')
+            localParameters.setItem('clusterActive-' + req.query.id + '', req.query.entity + '');
             _active = req.query.entity;
         }
         if (_cluster && clusterEntities.has( `${req.query.id}-${req.query.entity}`)) {
@@ -222,7 +223,8 @@ app.get("/cluster/init", function(req, res, next) {
         const _cluster = clusters.get(req.query.id + '')
         let _active = clusterActive.get(req.query.id + '')
         if (!_active) {
-            clusterActive.set(req.query.id + '', req.query.entity + '')
+            clusterActive.set(req.query.id + '', req.query.entity + '');
+            localParameters.setItem('clusterActive-' + req.query.id + '', req.query.entity + '');
             _active = req.query.entity;
         }
         if (_cluster && clusterEntities.has( `${req.query.id}-${req.query.entity}`)) {
@@ -230,6 +232,27 @@ app.get("/cluster/init", function(req, res, next) {
             Logger.printLine("StatusUpdate", `Entity ${req.query.entity}:${req.query.id} has initialized!`, "warning");
             res.status(200).json({
                 active: (_active === req.query.entity)
+            });
+        } else {
+            res.status(404).json({
+                error: 'Entity not found'
+            });
+        }
+    } else if (req.query.entity) {
+        res.status(404).json({error: 'ID Not Found'})
+    } else {
+        res.status(404).json({error: 'ID Not Found or Missing Entity'})
+    }
+});
+app.get("/cluster/force", function(req, res, next) {
+    if (req.query.id && req.query.entity && clusters.has(req.query.id) + '') {
+        const _cluster = clusters.get(req.query.id + '')
+        if (_cluster && clusterEntities.has( `${req.query.id}-${req.query.entity}`)) {
+            clusterActive.set(req.query.id + '', req.query.entity + '');
+            localParameters.setItem('clusterActive-' + req.query.id + '', req.query.entity + '');
+            res.status(200).json({
+                active: true,
+                transition: "forced"
             });
         } else {
             res.status(404).json({
@@ -368,6 +391,7 @@ async function updateIndicators() {
                                 clusterDead.set(`${c.id}-${e}`, true);
                             }
                             clusterActive.set(c.id, false);
+                            localParameters.removeItem('clusterActive-' + req.query.id + '');
                         }
                     }
                     watchDogFaults.push(`🚨 Cluster Node ${e}:${c.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
@@ -486,7 +510,7 @@ function registerEntities() {
         console.log('Registered Entities')
     })
     if (watchdogConfig.Cluster_Groups) {
-        watchdogConfig.Cluster_Groups.forEach(c => {
+        watchdogConfig.Cluster_Groups.forEach(async c => {
             clusters.set(c.id, {
                 id: c.id,
                 name: c.name,
@@ -495,7 +519,14 @@ function registerEntities() {
                 header: c.header,
                 entities: c.systems
             })
-            clusterActive.set(c.id, c.systems[0].id)
+            const clusterActiveNode = await localParameters.getItem('clusterActive-' + c.id)
+            if (clusterActiveNode) {
+                clusterActive.set(c.id, clusterActiveNode)
+            } else {
+                clusterActive.set(c.id, c.systems[0].id)
+                localParameters.setItem('clusterActive-' + c.id, c.systems[0].id)
+            }
+
             c.systems.forEach(e => {
                 clusterEntities.set(`${c.id}-${e.id}`, startTime);
             });
