@@ -393,6 +393,8 @@ async function updateIndicators() {
                             }
                             clusterActive.set(c.id, false);
                             localParameters.removeItem('clusterActive-' + req.query.id + '');
+                        } else {
+                            clusterDead.set(`${c.id}-${e}`, true);
                         }
                     }
                     watchDogFaults.push(`🚨 Cluster Node ${e}:${c.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
