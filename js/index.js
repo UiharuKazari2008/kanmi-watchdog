@@ -402,8 +402,10 @@ async function updateIndicators() {
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         activeNode = ei.name
+                        statusIcons += '🟨'
+                    } else {
+                        statusIcons += '🟧'
                     }
-                    statusIcons += '🟨'
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (!alarminhibited && (clusterActive.has(c.id) && clusterActive.get(c.id) === e) ) {
                             discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! Cluster Node ${e}:${c.id} has reset!`)
