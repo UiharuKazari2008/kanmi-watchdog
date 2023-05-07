@@ -482,19 +482,23 @@ function registerEntities() {
         w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startTime); });
         console.log('Registered Entities')
     })
-    watchdogConfig.Cluster_Groups.forEach(c => {
-        clusters.set(c.id, {
-            id: c.id,
-            name: c.name,
-            channel: c.channel,
-            type: c.type,
-            header: c.header,
-            entities: c.systems
+    if (watchdogConfig.Cluster_Groups) {
+        watchdogConfig.Cluster_Groups.forEach(c => {
+            clusters.set(c.id, {
+                id: c.id,
+                name: c.name,
+                channel: c.channel,
+                type: c.type,
+                header: c.header,
+                entities: c.systems
+            })
+            clusterActive.set(c.id, c.systems[0].id)
+            c.systems.forEach(e => {
+                clusterEntities.set(`${c.id}-${e.id}`, startTime);
+            });
+            console.log('Registered Clusters')
         })
-        clusterActive.set(c.id, c.systems[0].id)
-        c.systems.forEach(e => { clusterEntities.set(`${c.id}-${e.id}`, startTime); });
-        console.log('Registered Clusters')
-    })
+    }
 }
 async function updateStatus(input, forceUpdate, guildID, channelID) {
     if (!activeRefresh) {
