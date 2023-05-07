@@ -372,6 +372,9 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`🚨 Cluster Node ${e}:${c.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (!isNaN(_tI) && _tI <= 30) {
+                    if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
+                        activeNode = ei.name
+                    }
                     statusIcons += '🟨'
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (!alarminhibited && (clusterActive.has(c.id) && clusterActive.get(c.id) === e) ) {
