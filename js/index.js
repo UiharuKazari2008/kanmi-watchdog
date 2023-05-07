@@ -275,8 +275,9 @@ app.get("/cluster/get", function(req, res, next) {
                 const _lastInit = clusterReady.get(`${req.query.id}-${e}`)
                 const _lastTime = clusterEntities.get(`${req.query.id}-${e}`)
                 _times.push({
-                    id: e,
-                    active: (_active === e),
+                    id: e.id,
+                    name: e.name,
+                    active: (_active === e.id),
                     last_init: _lastInit,
                     last_check_in: _lastTime,
                     isLate:  (((new Date().getTime() - _lastTime) / 60000) >= 2),
