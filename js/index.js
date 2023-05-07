@@ -376,7 +376,7 @@ async function updateIndicators() {
                 // Last Reset
                 const _iS = clusterReady.get(`${c.id}-${e}`);
                 const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
-                if (_tS >= 4.8) {
+                if (_tS >= (e.fail_time || 5)) {
                     statusIcons += '🟥'
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
@@ -393,12 +393,28 @@ async function updateIndicators() {
                                 clusterDead.set(`${c.id}-${e}`, true);
                             }
                             clusterActive.set(c.id, false);
-                            localParameters.removeItem('clusterActive-' + req.query.id + '');
+                            localParameters.removeItem('clusterActive-' + c.id);
                         } else {
                             clusterDead.set(`${c.id}-${e}`, true);
                         }
                     }
                     watchDogFaults.push(`🚨 Cluster Node ${e}:${c.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                } else if (_tS >= 3) {
+                    statusIcons += '🟥'
+                    if (!clusterDead.has(`${c.id}-${e}`)) {
+                        if (!alarminhibited) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `📟 Cluster Node ${e}:${c.id} is no longer the active system! Waiting for next system...`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    clusterDead.set(`${c.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Entity ${e}:${c.id} was kicked from active role! It's missed its checkin window!`, "error")
+                                })
+                        } else {
+                            clusterDead.set(`${c.id}-${e}`, true);
+                        }
+                    }
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         activeNode = ei.name
