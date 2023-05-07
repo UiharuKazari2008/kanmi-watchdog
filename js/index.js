@@ -58,9 +58,14 @@ const Logger = require('./utils/logSystem')(facilityName);
 const startTime = new Date().getTime();
 let activeRefresh = false;
 let watchdogs = new Map();
+let clusters = new Map();
 let watchdogsEntities = new Map();
+let clusterEntities = new Map();
+let clusterActive = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
+let clusterReady = new Map();
+let clusterDead = new Map();
 let alarminhibited = false;
 
 Logger.printLine("Discord", "Settings up Discord bot", "debug")
@@ -188,6 +193,84 @@ app.get("/watchdog/get", function(req, res, next) {
         res.status(404).send('ID Not Found or Missing Entity')
     }
 });
+app.get("/cluster/ping", function(req, res, next) {
+    if (req.query.id && req.query.entity && clusters.has(req.query.id) + '') {
+        const _cluster = clusters.get(req.query.id + '')
+        let _active = clusterActive.get(req.query.id + '')
+        if (!_active) {
+            clusterActive.set(req.query.id + '', req.query.entity + '')
+            _active = req.query.entity;
+        }
+        if (_cluster && clusterEntities.has( `${req.query.id}-${req.query.entity}`)) {
+            clusterEntities.set(`${req.query.id}-${req.query.entity}`, new Date().getTime());
+            res.status(200).json({
+                active: (_active === req.query.entity)
+            });
+        } else {
+            res.status(404).json({
+                error: 'Entity not found'
+            });
+        }
+    } else if (req.query.entity) {
+        res.status(404).json({error: 'ID Not Found'})
+    } else {
+        res.status(404).json({error: 'ID Not Found or Missing Entity'})
+    }
+});
+app.get("/cluster/init", function(req, res, next) {
+    if (req.query.id && req.query.entity && clusters.has(req.query.id) + '') {
+        const _cluster = clusters.get(req.query.id + '')
+        let _active = clusterActive.get(req.query.id + '')
+        if (!_active) {
+            clusterActive.set(req.query.id + '', req.query.entity + '')
+            _active = req.query.entity;
+        }
+        if (_cluster && clusterEntities.has( `${req.query.id}-${req.query.entity}`)) {
+            clusterReady.set(`${req.query.id}-${req.query.entity}`, new Date().getTime());
+            Logger.printLine("StatusUpdate", `Entity ${req.query.entity}:${req.query.id} has initialized!`, "warning");
+            res.status(200).json({
+                active: (_active === req.query.entity)
+            });
+        } else {
+            res.status(404).json({
+                error: 'Entity not found'
+            });
+        }
+    } else if (req.query.entity) {
+        res.status(404).json({error: 'ID Not Found'})
+    } else {
+        res.status(404).json({error: 'ID Not Found or Missing Entity'})
+    }
+});
+app.get("/cluster/get", function(req, res, next) {
+    if (req.query.id && clusters.has(req.query.id) + '') {
+        const _cluster = clusters.get(req.query.id + '')
+        let _active = clusterActive.get(req.query.id + '')
+        if (_cluster) {
+            let _times = []
+            _cluster.entities.forEach(e => {
+                const _lastInit = clusterReady.get(`${req.query.id}-${e}`)
+                const _lastTime = clusterEntities.get(`${req.query.id}-${e}`)
+                _times.push({
+                    id: e,
+                    active: (_active === e),
+                    last_init: _lastInit,
+                    last_check_in: _lastTime,
+                    isLate:  (((new Date().getTime() - _lastTime) / 60000) >= 2),
+                    isDead:  (((new Date().getTime() - _lastTime) / 60000) >= 5)
+                })
+            })
+            res.status(200).json({
+                id: req.query.id,
+                entities: _times
+            });
+        } else {
+            res.status(404).send('Entity not found');
+        }
+    } else {
+        res.status(404).send('ID Not Found or Missing Entity')
+    }
+});
 
 async function updateIndicators() {
     let addUptimeWarning = false;
@@ -252,6 +335,75 @@ async function updateIndicators() {
             }
         })
         watchDogEntites.push(`${w.header}${w.name}: ${statusIcons}`);
+    })
+    await clusters.forEach(c => {
+        let statusIcons =  ``;
+        let activeNode = '🔎'
+        c.entities.forEach(ei => {
+            const e = ei.id
+            if (e.startsWith("_")) {
+                statusIcons += e.substring(1)
+            }
+            else {
+                // Last Ping
+                const _wS = clusterEntities.get(`${c.id}-${e}`);
+                const _tS = ((new Date().getTime() - _wS) / 60000).toFixed(2);
+                // Last Reset
+                const _iS = clusterReady.get(`${c.id}-${e}`);
+                const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
+                if (_tS >= 4.8) {
+                    statusIcons += '🟥'
+                    if (!clusterDead.has(`${c.id}-${e}`)) {
+                        if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
+                            if (!alarminhibited) {
+                                discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `📟 Cluster Node ${e}:${c.id} is no longer the active system! Waiting for next system...`)
+                                    .catch(err => {
+                                        Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                    })
+                                    .then(() => {
+                                        clusterDead.set(`${c.id}-${e}`, true);
+                                        Logger.printLine("StatusUpdate", `Entity ${e}:${c.id} was kicked from active role! It's missed its checkin window!`, "error")
+                                    })
+                            } else {
+                                clusterDead.set(`${c.id}-${e}`, true);
+                            }
+                            clusterActive.set(c.id, false);
+                        }
+                    }
+                    watchDogFaults.push(`🚨 Cluster Node ${e}:${c.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                } else if (!isNaN(_tI) && _tI <= 30) {
+                    statusIcons += '🟨'
+                    if (!clusterDead.has(`${c.id}-${e}`)) {
+                        if (!alarminhibited && (clusterActive.has(c.id) && clusterActive.get(c.id) === e) ) {
+                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! Cluster Node ${e}:${c.id} has reset!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    clusterDead.set(`${c.id}-${e}`, true);
+                                    Logger.printLine("StatusUpdate", `Cluster Node ${e}:${c.id} has reset!`, "warning")
+                                })
+                        } else {
+                            clusterDead.set(`${c.id}-${e}`, true);
+                        }
+                    }
+
+                    watchDogWarnings.push(`♻️ Entity ${e}:${c.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
+                } else {
+                    if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
+                        statusIcons += '✅'
+                        activeNode = ei.name
+                    } else {
+                        statusIcons += '🟩'
+                    }
+                    clusterDead.delete(`${c.id}-${e}`);
+                }
+            }
+        })
+        if (!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) {
+            watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new active node...`)
+        }
+        watchDogEntites.push(`${c.header}${c.name}//${(!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) ? '🔎' : activeNode}: ${statusIcons}`);
     })
     let pingResults = [];
     if (watchdogConfig.Ping_Hosts) {
@@ -329,6 +481,19 @@ function registerEntities() {
         });
         w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startTime); });
         console.log('Registered Entities')
+    })
+    watchdogConfig.Cluster_Groups.forEach(c => {
+        clusters.set(c.id, {
+            id: c.id,
+            name: c.name,
+            channel: c.channel,
+            type: c.type,
+            header: c.header,
+            entities: c.systems
+        })
+        clusterActive.set(c.id, c.systems[0].id)
+        c.systems.forEach(e => { clusterEntities.set(`${c.id}-${e.id}`, startTime); });
+        console.log('Registered Clusters')
     })
 }
 async function updateStatus(input, forceUpdate, guildID, channelID) {
