@@ -300,6 +300,7 @@ async function updateIndicators() {
     let watchDogWarnings = [];
     let watchDogFaults = [];
     let watchDogEntites = [];
+    let clusterEntites = [];
     await watchdogs.forEach(w => {
         let statusIcons =  ``;
         if (!addUptimeWarning && process.uptime() <= 15 * 60) {
@@ -430,7 +431,7 @@ async function updateIndicators() {
         if (!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) {
             watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new active node...`)
         }
-        watchDogEntites.push(`${c.header}${c.name}//${(!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) ? '🔎' : activeNode}: ${statusIcons}`);
+        clusterEntites.push(`${c.header}${c.name}//${(!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) ? '🔎' : activeNode}: ${statusIcons}`);
     })
     let pingResults = [];
     if (watchdogConfig.Ping_Hosts) {
@@ -488,6 +489,7 @@ async function updateIndicators() {
                     if (localKeys.indexOf("statusgen-" + guild.id) !== -1 ) {
                         updateStatus({
                             status: watchDogEntites,
+                            cluster: clusterEntites,
                             pings: pingResults,
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
@@ -597,6 +599,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             })
         }
 
+        if (input && input.cluster.length > 0) {
+            embed.fields.push({
+                "name": `⚙️ Service Cluster`,
+                "value": `${input.cluster.join('\n')}`.substring(0, 1024)
+            })
+        }
         if (input && input.status.length > 0) {
             embed.fields.push({
                 "name": `🚥 Service Watchdog`,
