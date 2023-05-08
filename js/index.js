@@ -444,7 +444,7 @@ async function updateIndicators() {
         }
         if (onlineNodes <= 1) {
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
-        } else {
+        } else if (onlineNodes === 0) {
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`)
         }
         clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
