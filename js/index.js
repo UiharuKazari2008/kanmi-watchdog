@@ -601,12 +601,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
         if (input && input.faults.length > 0)
             faults = input.faults;
         if (alarminhibited)
-            warnings.push('⚠ Alarms are inhibited! Please re-enable!');
+            warnings.push('⚠️ Alarms are inhibited! Please re-enable!');
 
         if (warnings.length > 0) {
             embed.color = 16771840
             embed.fields.unshift({
-                "name": `⚠ Active Warnings`,
+                "name": `⚠️ Active Warnings`,
                 "value": warnings.join('\n').substring(0, 1024)
             })
         }
