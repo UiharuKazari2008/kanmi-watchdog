@@ -335,7 +335,7 @@ async function updateIndicators() {
                             watchdogsDead.set(`${w.id}-${e}`, true);
                         }
                     }
-                    watchDogFaults.push(`🚨 Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    watchDogFaults.push(`⁉️ Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     statusIcons += '🟨'
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
@@ -364,6 +364,7 @@ async function updateIndicators() {
     await clusters.forEach(c => {
         let statusIcons =  ``;
         let activeNode = '🔎'
+        let onlineNodes = 0;
         c.entities.forEach(ei => {
             const e = ei.id
             if (e.startsWith("_")) {
@@ -381,13 +382,13 @@ async function updateIndicators() {
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                             if (!alarminhibited) {
-                                discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `📟 Cluster Node ${e}:${c.id} is no longer the active system! Waiting for next system...`)
+                                discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `📟 ${c.name} Cluster Node ${ei.name} is no longer the active system! Waiting for next system...`)
                                     .catch(err => {
                                         Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                     })
                                     .then(() => {
                                         clusterDead.set(`${c.id}-${e}`, true);
-                                        Logger.printLine("StatusUpdate", `Entity ${e}:${c.id} was kicked from active role! It's missed its checkin window!`, "error")
+                                        Logger.printLine("StatusUpdate", `${c.name} Cluster Node ${ei.name}  was kicked from active role! It's missed its checkin window!`, "error")
                                     })
                             } else {
                                 clusterDead.set(`${c.id}-${e}`, true);
@@ -398,33 +399,20 @@ async function updateIndicators() {
                             clusterDead.set(`${c.id}-${e}`, true);
                         }
                     }
-                    watchDogFaults.push(`🚨 Cluster Node ${e}:${c.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (_tS >= 3) {
-                    statusIcons += '🟥'
-                    if (!clusterDead.has(`${c.id}-${e}`)) {
-                        if (!alarminhibited) {
-                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `📟 Cluster Node ${e}:${c.id} is no longer the active system! Waiting for next system...`)
-                                .catch(err => {
-                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
-                                })
-                                .then(() => {
-                                    clusterDead.set(`${c.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${e}:${c.id} was kicked from active role! It's missed its checkin window!`, "error")
-                                })
-                        } else {
-                            clusterDead.set(`${c.id}-${e}`, true);
-                        }
-                    }
+                    statusIcons += '🟧'
+                    watchDogWarnings.push(`⚠️ ${c.name} Cluster Node ${ei.name} has not been resonded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         activeNode = ei.name
-                        statusIcons += '🟨'
+                        statusIcons += '🟦'
                     } else {
-                        statusIcons += '🟧'
+                        statusIcons += '🟨'
                     }
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (!alarminhibited && (clusterActive.has(c.id) && clusterActive.get(c.id) === e) ) {
-                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! Cluster Node ${e}:${c.id} has reset!`)
+                            discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! ${c.name} Cluster Node ${ei.name} has reset!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                 })
@@ -437,7 +425,8 @@ async function updateIndicators() {
                         }
                     }
 
-                    watchDogWarnings.push(`♻️ Entity ${e}:${c.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
+                    watchDogWarnings.push(`♻️ ${c.name} Cluster Node ${ei.name} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
+                    onlineNodes++;
                 } else {
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         statusIcons += '✅'
@@ -446,13 +435,19 @@ async function updateIndicators() {
                         statusIcons += '🟩'
                     }
                     clusterDead.delete(`${c.id}-${e}`);
+                    onlineNodes++;
                 }
             }
         })
-        if (!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) {
-            watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new active node...`)
+        if (activeNode === '🔎') {
+            watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new node...`)
         }
-        clusterEntites.push(`${c.header}${c.name}//${(!(clusterActive.has(c.id) && clusterActive.get(c.id) !== false)) ? '🔎' : activeNode}: ${statusIcons}`);
+        if (onlineNodes <= 1) {
+            watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
+        } else {
+            watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`)
+        }
+        clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
     })
     let pingResults = [];
     if (watchdogConfig.Ping_Hosts) {
@@ -479,7 +474,7 @@ async function updateIndicators() {
                             watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
                         }
                     }
-                    watchDogFaults.push(`🚨 ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                 } else if (parseFloat(res.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
