@@ -302,6 +302,10 @@ async function updateIndicators() {
     let watchDogFaults = [];
     let watchDogEntites = [];
     let clusterEntites = [];
+    let watchdogWarning = false;
+    let clusterWarning = false;
+    let watchdogFault = false;
+    let clusterFault = false;
     await watchdogs.forEach(w => {
         let statusIcons =  ``;
         if (!addUptimeWarning && process.uptime() <= 15 * 60) {
@@ -321,6 +325,7 @@ async function updateIndicators() {
                 const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
                 if (_tS >= 4.8) {
                     statusIcons += '🟥'
+                    watchdogFault = true;
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
                         if (!alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ALARM! Entity ${e}:${w.id} may be dead!`)
@@ -338,6 +343,7 @@ async function updateIndicators() {
                     watchDogFaults.push(`⁉️ Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     statusIcons += '🟨'
+                    watchdogWarning = true;
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
                         if (!alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Warn_Channel, `♻️ WARNING! Entity ${e}:${w.id} has reset!`)
@@ -378,7 +384,8 @@ async function updateIndicators() {
                 const _iS = clusterReady.get(`${c.id}-${e}`);
                 const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
                 if (_tS >= (e.fail_time || 5)) {
-                    statusIcons += '🟥'
+                    statusIcons += '🟥';
+                    clusterFault = true;
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                             if (!alarminhibited) {
@@ -400,7 +407,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
-                } else if (_tS >= 3) {
+                } else if (_tS >= (e.warn_time || 3)) {
                     statusIcons += '🟧'
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         activeNode = ei.name
@@ -443,12 +450,15 @@ async function updateIndicators() {
             }
         })
         if (activeNode === '🔎') {
-            watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new node...`)
+            watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new node...`);
+            clusterWarning = true;
         }
-        if (onlineNodes <= 1) {
+        if (onlineNodes === 0) {
+            watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
+            clusterFault = true;
+        } else if (onlineNodes <= 1) {
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
-        } else if (onlineNodes === 0) {
-            watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`)
+            clusterWarning = true;
         }
         clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
     })
@@ -507,6 +517,8 @@ async function updateIndicators() {
                 guilds.forEach(function (guild) {
                     if (localKeys.indexOf("statusgen-" + guild.id) !== -1 ) {
                         updateStatus({
+                            watchdogWarning, clusterWarning,
+                            watchdogFault, clusterFault,
                             status: watchDogEntites,
                             cluster: clusterEntites,
                             pings: pingResults,
@@ -573,6 +585,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             return false;
         }
         let embed = {
+            "title": "✅ Systems Operating Normally",
             "footer": {
                 "text": `Watchdog Status`,
                 "icon_url": discordClient.guilds.get(guildID).iconURL
@@ -603,6 +616,25 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
         if (alarminhibited)
             warnings.push('⚠️ Alarms are inhibited! Please re-enable!');
 
+        if (input && (input.watchdogFault || input.clusterFault)) {
+            if (input.watchdogFault && input.clusterFault) {
+                embed.title = `❌ Cluster & Service Failures Detected`
+            } else if (input.clusterFault) {
+                embed.title = `❌ Cluster Failures Detected`
+
+            } else if (input.watchdogFault) {
+                embed.title = `❌ Service Failures Detected`
+            }
+        } else if (input && (input.watchdogWarning || input.clusterWarning)) {
+            if (input.watchdogWarning && input.clusterWarning) {
+                embed.title = `🔶 Cluster & Service Warnings`
+            } else if (input.clusterFault) {
+                embed.title = `🔶 Cluster Warnings`
+
+            } else if (input.watchdogFault) {
+                embed.title = `🔶 Service Warnings`
+            }
+        }
         if (warnings.length > 0) {
             embed.color = 16771840
             embed.fields.unshift({
