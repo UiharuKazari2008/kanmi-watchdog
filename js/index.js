@@ -90,6 +90,31 @@ discordClient.registerCommand("reset", function (msg,args) {
     fullDescription: "Resets all active alarms and warnings",
     guildOnly: true
 })
+discordClient.registerCommand("activate", function (msg,args) {
+    if (args.length > 1) {
+        if (clusters.has(args[0])) {
+            const _cluster = clusters.get(args[0])
+            const _node = _cluster.entities.filter(e => e.name.toLowerCase() === args[1].toLowerCase())[0];
+            if (_cluster && _node && clusterEntities.has( `${args[0]}-${_node.id}`)) {
+                clusterActive.set(args[0], _node.id);
+                localParameters.setItem('clusterActive-' + args[0], _node.id);
+                return `Cluster Node has been marked as active, wait for checkin to complete`
+            } else {
+                return `Cluster Node not found!`
+            }
+        } else {
+            return `Cluster not found!`
+        }
+    } else {
+        return `Missing cluster ID and node number`
+    }
+},{
+    argsRequired: true,
+    caseInsensitive: true,
+    description: "Change cluster node",
+    fullDescription: "Change the active cluster node manually",
+    guildOnly: true
+})
 discordClient.registerCommand("inhibit", function (msg,args) {
     alarminhibited = (!alarminhibited);
     return `Alarms are ${((alarminhibited) ? 'disabled, dashboard will still update!' : 'enabled!')}`
@@ -277,7 +302,7 @@ app.get("/cluster/get", function(req, res, next) {
                 _times.push({
                     id: e.id,
                     name: e.name,
-                    active: (_active === e.id),
+                    isActive: (_active === e.id),
                     last_init: _lastInit,
                     last_check_in: _lastTime,
                     isLate:  (((new Date().getTime() - _lastTime) / 60000) >= 2),
@@ -587,7 +612,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
         let embed = {
             "title": "✅ Systems Operating Normally",
             "footer": {
-                "text": `Watchdog Status`,
+                "text": `System Status`,
                 "icon_url": discordClient.guilds.get(guildID).iconURL
             },
             "timestamp": (new Date().toISOString()) + "",
@@ -628,10 +653,10 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
         } else if (input && (input.watchdogWarning || input.clusterWarning)) {
             if (input.watchdogWarning && input.clusterWarning) {
                 embed.title = `🔶 Cluster & Service Warnings`
-            } else if (input.clusterFault) {
+            } else if (input.clusterWarning) {
                 embed.title = `🔶 Cluster Warnings`
 
-            } else if (input.watchdogFault) {
+            } else if (input.watchdogWarning) {
                 embed.title = `🔶 Service Warnings`
             }
         }
