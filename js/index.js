@@ -64,6 +64,7 @@ let clusterEntities = new Map();
 let clusterActive = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
+let watchdogsWarn = new Map();
 let clusterReady = new Map();
 let clusterDead = new Map();
 let alarminhibited = false;
@@ -496,10 +497,11 @@ async function updateIndicators() {
                     extra: ['-i', '3'],
                 });
                 const _wS = watchdogsDead.get(`ping-${host.ip}`);
-                if (parseFloat(res.packetLoss) === 100) {
+                const _wW = watchdogsWarn.get(`ping-${host.ip}`);
+                if (parseFloat(res.packetLoss) === 100 && !watchdogsWarn.has(`ping-${host.ip}`)) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
-                        if (!host.no_notify_on_fail && !alarminhibited) {
+                        if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
@@ -516,6 +518,7 @@ async function updateIndicators() {
                 } else if (parseFloat(res.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
+                    watchdogsWarn.set(`ping-${host.ip}`, true)
                 } else {
                     pingResults.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`ping-${host.ip}`)) {
@@ -531,6 +534,7 @@ async function updateIndicators() {
                         }
                     }
                     watchdogsDead.delete(`ping-${host.ip}`);
+                    watchdogsWarn.delete(`ping-${host.ip}`);
                 }
                 ok();
             }))
