@@ -53,6 +53,7 @@ localParameters.init((err) => {
     }
 });
 let topMessage = false;
+let topState = false;
 
 const Logger = require('./utils/logSystem')(facilityName);
 
@@ -324,7 +325,8 @@ app.get("/cluster/get", function(req, res, next) {
 });
 app.get("/homepage/top", function(req, res, next) {
     res.status(200).json({
-        state: topMessage
+        message: topMessage,
+        state: topState
     })
 });
 
@@ -551,10 +553,12 @@ async function updateIndicators() {
         }, Promise.resolve());
     }
     if (mainFaults.length > 0) {
+        topState = false;
         topMessage = mainFaults[0].toString();
         if (mainFaults.length > 1)
             topMessage += ` (+${mainFaults.length})`
     } else {
+        topState = true;
         topMessage = "Systems Operating Normally"
     }
     localParameters.keys().then((localKeys) => {
