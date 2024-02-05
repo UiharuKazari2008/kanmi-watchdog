@@ -52,6 +52,7 @@ localParameters.init((err) => {
         Logger.printLine("LocalParameters", "Initialized successfully the Local parameters storage", "debug", err)
     }
 });
+let topMessage = false;
 
 const Logger = require('./utils/logSystem')(facilityName);
 
@@ -321,8 +322,14 @@ app.get("/cluster/get", function(req, res, next) {
         res.status(404).send('ID Not Found or Missing Entity')
     }
 });
+app.get("/homepage/top", function(req, res, next) {
+    res.status(200).json({
+        state: topMessage
+    })
+});
 
 async function updateIndicators() {
+    let mainFaults = [];
     let addUptimeWarning = false;
     let watchDogWarnings = [];
     let watchDogFaults = [];
@@ -367,6 +374,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`⁉️ Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    mainFaults.push(`${e}:${w.id} has failed`);
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     statusIcons += '🟨'
                     watchdogWarning = true;
@@ -432,6 +440,7 @@ async function updateIndicators() {
                             clusterDead.set(`${c.id}-${e}`, true);
                         }
                     }
+                    mainFaults.push(`${c.name} Cluster Node has failed!`);
                     watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (_tS >= (e.warn_time || 3)) {
                     statusIcons += '🟧'
@@ -515,6 +524,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    mainFaults.push(`${host.name} is offline!`);
                 } else if (parseFloat(res.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
@@ -539,6 +549,13 @@ async function updateIndicators() {
                 ok();
             }))
         }, Promise.resolve());
+    }
+    if (mainFaults.length > 0) {
+        topMessage = mainFaults[0].toString();
+        if (mainFaults.length > 1)
+            topMessage += ` (+${mainFaults.length})`
+    } else {
+        mainFaults = "Systems Operating Normally"
     }
     localParameters.keys().then((localKeys) => {
         discordClient.getRESTGuilds()
