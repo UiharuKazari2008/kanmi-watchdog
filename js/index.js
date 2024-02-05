@@ -555,7 +555,7 @@ async function updateIndicators() {
         if (mainFaults.length > 1)
             topMessage += ` (+${mainFaults.length})`
     } else {
-        mainFaults = "Systems Operating Normally"
+        topMessage = "Systems Operating Normally"
     }
     localParameters.keys().then((localKeys) => {
         discordClient.getRESTGuilds()
