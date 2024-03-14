@@ -314,6 +314,7 @@ app.get("/cluster/get", function(req, res, next) {
             })
             res.status(200).json({
                 id: req.query.id,
+                active: _active,
                 entities: _times
             });
         } else {
