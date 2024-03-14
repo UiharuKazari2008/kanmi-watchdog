@@ -293,6 +293,17 @@ app.get("/cluster/force", function(req, res, next) {
         res.status(404).json({error: 'ID Not Found or Missing Entity'})
     }
 });
+app.get("/cluster/force/search", function(req, res, next) {
+    if (req.query.id && clusters.has(req.query.id) + '') {
+        clusterActive.set(req.query.id, false);
+        localParameters.removeItem('clusterActive-' + req.query.id);
+        res.status(200).json({transition: "searching"})
+    } else if (req.query.entity) {
+        res.status(404).json({error: 'ID Not Found'})
+    } else {
+        res.status(404).json({error: 'ID Not Found or Missing Entity'})
+    }
+});
 app.get("/cluster/get", function(req, res, next) {
     if (req.query.id && clusters.has(req.query.id) + '') {
         const _cluster = clusters.get(req.query.id + '')
