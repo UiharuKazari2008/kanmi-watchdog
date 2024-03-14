@@ -225,7 +225,7 @@ app.get("/cluster/ping", function(req, res, next) {
     if (req.query.id && req.query.entity && clusters.has(req.query.id) + '') {
         const _cluster = clusters.get(req.query.id + '')
         let _active = clusterActive.get(req.query.id + '')
-        if (!_active || (_cluster.always_active && _cluster.always_active === req.query.entity + '' && _active !== req.query.entity)) {
+        if (!_active || (_cluster.always_active && _cluster.always_active === req.query.entity + '')) {
             clusterActive.set(req.query.id + '', req.query.entity + '');
             localParameters.setItem('clusterActive-' + req.query.id + '', req.query.entity + '');
             _active = req.query.entity;
@@ -250,7 +250,7 @@ app.get("/cluster/init", function(req, res, next) {
     if (req.query.id && req.query.entity && clusters.has(req.query.id) + '') {
         const _cluster = clusters.get(req.query.id + '')
         let _active = clusterActive.get(req.query.id + '')
-        if (!_active || (_cluster.always_active && _cluster.always_active === req.query.entity + '' && _active !== req.query.entity)) {
+        if (!_active || (_cluster.always_active && _cluster.always_active === req.query.entity + '')) {
             clusterActive.set(req.query.id + '', req.query.entity + '');
             localParameters.setItem('clusterActive-' + req.query.id + '', req.query.entity + '');
             _active = req.query.entity;
