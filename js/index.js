@@ -437,8 +437,6 @@ async function updateIndicators() {
                             } else {
                                 clusterDead.set(`${c.id}-${e}`, true);
                             }
-                            clusterActive.set(c.id, false);
-                            localParameters.removeItem('clusterActive-' + c.id);
                         } else {
                             clusterDead.set(`${c.id}-${e}`, true);
                         }
@@ -490,6 +488,8 @@ async function updateIndicators() {
         if (activeNode === '🔎') {
             watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new node...`);
             clusterWarning = true;
+            clusterActive.set(c.id, false);
+            localParameters.removeItem('clusterActive-' + c.id);
         }
         if (onlineNodes === 0) {
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
