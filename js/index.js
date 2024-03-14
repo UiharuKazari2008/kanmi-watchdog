@@ -300,8 +300,8 @@ app.get("/cluster/get", function(req, res, next) {
         if (_cluster) {
             let _times = []
             _cluster.entities.forEach(e => {
-                const _lastInit = clusterReady.get(`${req.query.id}-${e}`)
-                const _lastTime = clusterEntities.get(`${req.query.id}-${e}`)
+                const _lastInit = clusterReady.get(`${e}`)
+                const _lastTime = clusterEntities.get(`${e}`)
                 _times.push({
                     id: e.id,
                     name: e.name,
@@ -426,12 +426,12 @@ async function updateIndicators() {
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                             if (!alarminhibited) {
+                                clusterDead.set(`${c.id}-${e}`, true);
                                 discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `📟 ${c.name} Cluster Node ${ei.name} is no longer the active system! Waiting for next system...`)
                                     .catch(err => {
                                         Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                     })
                                     .then(() => {
-                                        clusterDead.set(`${c.id}-${e}`, true);
                                         Logger.printLine("StatusUpdate", `${c.name} Cluster Node ${ei.name}  was kicked from active role! It's missed its checkin window!`, "error")
                                     })
                             } else {
