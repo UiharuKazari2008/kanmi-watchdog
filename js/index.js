@@ -420,7 +420,7 @@ async function updateIndicators() {
                 // Last Reset
                 const _iS = clusterReady.get(`${c.id}-${e}`);
                 const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
-                if (_tS >= (e.fail_time || 5)) {
+                if (_tS >= (ei.fail_time || 5)) {
                     statusIcons += '🟥';
                     clusterFault = true;
                     if (!clusterDead.has(`${c.id}-${e}`)) {
@@ -445,7 +445,7 @@ async function updateIndicators() {
                     }
                     mainFaults.push(`${c.name} Cluster Node has failed!`);
                     watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
-                } else if (_tS >= (e.warn_time || 3)) {
+                } else if (_tS >= (ei.warn_time || 3)) {
                     statusIcons += '🟧'
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         activeNode = ei.name
@@ -601,7 +601,8 @@ function registerEntities() {
                 channel: c.channel,
                 type: c.type,
                 header: c.header,
-                always_active: c.always_active || undefined,
+                fail_time: c.fail_time,
+                warn_time: c.warn_time,
                 entities: c.systems
             })
             const clusterActiveNode = await localParameters.getItem('clusterActive-' + c.id)
