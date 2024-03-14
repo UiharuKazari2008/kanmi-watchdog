@@ -311,8 +311,8 @@ app.get("/cluster/get", function(req, res, next) {
         if (_cluster) {
             let _times = []
             _cluster.entities.forEach(e => {
-                const _lastInit = clusterReady.get(`${e}`)
-                const _lastTime = clusterEntities.get(`${e}`)
+                const _lastInit = clusterReady.get(`${req.query.id}-${e}`)
+                const _lastTime = clusterEntities.get(`${req.query.id}-${e}`)
                 _times.push({
                     id: e.id,
                     name: e.name,
