@@ -616,7 +616,7 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.push(`${host.name} is offline!`);
-                } else if (res.duration >= 3000) {
+                } else if (res.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
