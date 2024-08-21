@@ -27,10 +27,12 @@ const facilityName = 'Discord-Watchdog';
 const eris = require('eris');
 const colors = require('colors');
 const express = require("express");
+const md5 = require('md5');
 const app = express();
 const http = require('http').createServer(app).listen(7950, (systemglobal.interface) ? systemglobal.interface : "0.0.0.0");
 const RateLimiter = require('limiter').RateLimiter;
 const ping = require('ping');
+const axios = require('axios');
 let init = 0;
 const bootTime = (Date.now().valueOf() / 1000).toFixed(0)
 const storageHandler = require('node-persist');
@@ -342,6 +344,30 @@ app.get("/homepage/top", function(req, res, next) {
     })
 });
 
+async function checkServer(url, options) {
+    const startTime = Date.now(); // Record the start time
+    try {
+        const response = await axios.get(url, {
+            timeout: (options.timeout * 1000) || 2000 // 2 seconds timeout
+        });
+        const endTime = Date.now(); // Record the end time
+        const duration = endTime - startTime; // Calculate the duration
+        return {
+            status: response.status,
+            ok: response.status < 400,
+            duration
+        }; // Returns an object with the status and time taken
+    } catch (error) {
+        const endTime = Date.now(); // Record the end time even if there is an error
+        const duration = endTime - startTime; // Calculate the duration
+        return {
+            status: 500,
+            ok: false,
+            duration
+        }; // Returns false and the time taken
+    }
+}
+
 async function updateIndicators() {
     let mainFaults = [];
     let addUptimeWarning = false;
@@ -433,7 +459,6 @@ async function updateIndicators() {
                 const _tI = ((new Date().getTime() - _iS) / 60000).toFixed(2);
                 if (_tS >= (ei.fail_time || 5)) {
                     statusIcons += '🟥';
-                    clusterFault = true;
                     if (!clusterDead.has(`${c.id}-${e}`)) {
                         if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                             if (!alarminhibited) {
@@ -559,6 +584,57 @@ async function updateIndicators() {
                     }
                     watchdogsDead.delete(`ping-${host.ip}`);
                     watchdogsWarn.delete(`ping-${host.ip}`);
+                }
+                ok();
+            }))
+        }, Promise.resolve());
+    }
+    if (watchdogConfig.Ping_HTTP) {
+        await Array.from(watchdogConfig.Ping_HTTP).reduce((promiseChain, host) => {
+            return promiseChain.then(() => new Promise(async (ok) => {
+                let res = await checkServer(host.url, {
+                    timeout: host.timeout || 5
+                });
+                const _wS = watchdogsDead.get(`ping-${md5(host.url)}`);
+                const _wW = watchdogsWarn.get(`ping-${md5(host.url)}`);
+                if (parseFloat(res.packetLoss) === 100 && !watchdogsWarn.has(`ping-${md5(host.url)}`)) {
+                    pingResults.push(`🟥 ${host.name}`);
+                    if (!watchdogsDead.has(`ping-${md5(host.url)}`)) {
+                        if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${md5(host.url)}`)) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`ping-${md5(host.url)}`, new Date().getTime());
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                })
+                        } else {
+                            watchdogsDead.set(`ping-${md5(host.url)}`, new Date().getTime());
+                        }
+                    }
+                    watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    mainFaults.push(`${host.name} is offline!`);
+                } else if (parseFloat(res.packetLoss) > 0) {
+                    pingResults.push(`🟨 ${host.name}`);
+                    watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
+                    watchdogsWarn.set(`ping-${md5(host.url)}`, true)
+                } else {
+                    pingResults.push(`🟩 ${host.name}`);
+                    if (watchdogsDead.has(`ping-${md5(host.url)}`)) {
+                        if (!host.no_notify_on_success && !alarminhibited) {
+                            discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.delete(`ping-${md5(host.url)}`);
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                })
+                        }
+                    }
+                    watchdogsDead.delete(`ping-${md5(host.url)}`);
+                    watchdogsWarn.delete(`ping-${md5(host.url)}`);
                 }
                 ok();
             }))
