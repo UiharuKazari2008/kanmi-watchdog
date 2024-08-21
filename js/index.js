@@ -598,7 +598,7 @@ async function updateIndicators() {
                 });
                 const _wS = watchdogsDead.get(`httpcheck-${md5(host.url)}`);
                 const _wW = watchdogsWarn.get(`httpcheck-${md5(host.url)}`);
-                if (parseFloat(res.packetLoss) === 100 && !watchdogsWarn.has(`httpcheck-${md5(host.url)}`)) {
+                if (!res.ok && !watchdogsWarn.has(`httpcheck-${md5(host.url)}`)) {
                     httpResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
@@ -616,7 +616,7 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.push(`${host.name} is offline!`);
-                } else if (parseFloat(res.packetLoss) > 0) {
+                } else if (res.duration >= 3) {
                     httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
