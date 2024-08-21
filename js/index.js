@@ -537,6 +537,7 @@ async function updateIndicators() {
         clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
     })
     let pingResults = [];
+    let httpResults = [];
     if (watchdogConfig.Ping_Hosts) {
         await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
@@ -595,46 +596,46 @@ async function updateIndicators() {
                 let res = await checkServer(host.url, {
                     timeout: host.timeout || 5
                 });
-                const _wS = watchdogsDead.get(`ping-${md5(host.url)}`);
-                const _wW = watchdogsWarn.get(`ping-${md5(host.url)}`);
-                if (parseFloat(res.packetLoss) === 100 && !watchdogsWarn.has(`ping-${md5(host.url)}`)) {
-                    pingResults.push(`🟥 ${host.name}`);
-                    if (!watchdogsDead.has(`ping-${md5(host.url)}`)) {
-                        if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${md5(host.url)}`)) {
+                const _wS = watchdogsDead.get(`httpcheck-${md5(host.url)}`);
+                const _wW = watchdogsWarn.get(`httpcheck-${md5(host.url)}`);
+                if (parseFloat(res.packetLoss) === 100 && !watchdogsWarn.has(`httpcheck-${md5(host.url)}`)) {
+                    httpResults.push(`🟥 ${host.name}`);
+                    if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
+                        if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                 })
                                 .then(() => {
-                                    watchdogsDead.set(`ping-${md5(host.url)}`, new Date().getTime());
+                                    watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
                                     Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
                                 })
                         } else {
-                            watchdogsDead.set(`ping-${md5(host.url)}`, new Date().getTime());
+                            watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
                         }
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.push(`${host.name} is offline!`);
                 } else if (parseFloat(res.packetLoss) > 0) {
-                    pingResults.push(`🟨 ${host.name}`);
+                    httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
-                    watchdogsWarn.set(`ping-${md5(host.url)}`, true)
+                    watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
                 } else {
-                    pingResults.push(`🟩 ${host.name}`);
-                    if (watchdogsDead.has(`ping-${md5(host.url)}`)) {
+                    httpResults.push(`🟩 ${host.name}`);
+                    if (watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_success && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                 })
                                 .then(() => {
-                                    watchdogsDead.delete(`ping-${md5(host.url)}`);
+                                    watchdogsDead.delete(`httpcheck-${md5(host.url)}`);
                                     Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
                                 })
                         }
                     }
-                    watchdogsDead.delete(`ping-${md5(host.url)}`);
-                    watchdogsWarn.delete(`ping-${md5(host.url)}`);
+                    watchdogsDead.delete(`httpcheck-${md5(host.url)}`);
+                    watchdogsWarn.delete(`httpcheck-${md5(host.url)}`);
                 }
                 ok();
             }))
@@ -660,6 +661,7 @@ async function updateIndicators() {
                             status: watchDogEntites,
                             cluster: clusterEntites,
                             pings: pingResults,
+                            http: httpResults,
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
                         }, true, guild.id)
@@ -800,6 +802,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
             embed.fields.push({
                 "name": `🚥 Service Watchdog`,
                 "value": `${input.status.join('\n')}`.substring(0, 1024)
+            })
+        }
+        if (input && input.http.length > 0) {
+            embed.fields.push({
+                "name": `🌡️ Service Availability`,
+                "value": `${input.http.join('\n')}`.substring(0, 1024)
             })
         }
         if (input && input.pings.length > 0) {
