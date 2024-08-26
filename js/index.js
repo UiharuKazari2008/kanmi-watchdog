@@ -445,6 +445,7 @@ async function updateIndicators() {
         let statusIcons =  ``;
         let activeNode = '🔎'
         let onlineNodes = 0;
+        let _watchDogFaults = [];
         c.entities.forEach(ei => {
             const e = ei.id
             if (e.startsWith("_")) {
@@ -478,7 +479,7 @@ async function updateIndicators() {
                         }
                     }
                     mainFaults.push(`${c.name} Cluster Node has failed!`);
-                    watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    _watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (_tS >= (ei.warn_time || 3)) {
                     statusIcons += '🟧'
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
@@ -526,13 +527,16 @@ async function updateIndicators() {
             clusterWarning = true;
             clusterActive.set(c.id, false);
             localParameters.removeItem('clusterActive-' + c.id);
+            watchDogFaults.push(..._watchDogFaults);
         }
         if (onlineNodes === 0) {
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
             clusterFault = true;
+            watchDogFaults.push(..._watchDogFaults);
         } else if (onlineNodes <= 1) {
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
             clusterWarning = true;
+            watchDogFaults.push(..._watchDogFaults);
         }
         clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
     })
