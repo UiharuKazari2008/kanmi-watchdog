@@ -60,7 +60,7 @@ let topState = false;
 const Logger = require('./utils/logSystem')(facilityName);
 
 const startTime = new Date().getTime();
-let activeRefresh = false;
+let activeRefresh = {};
 let watchdogs = new Map();
 let clusters = new Map();
 let watchdogsEntities = new Map();
@@ -134,7 +134,7 @@ discordClient.registerCommand("status", async function (msg,args) {
     if (args.length > 0) {
         switch (args[0]) {
             case 'enable':
-                updateStatus(undefined, true, msg.guildID, args[1].replace("<#", "").replace(">", ""));
+                updateStatus(undefined, true, msg.guildID, args[1].replace("<#", "").replace(">", ""), (args.length >= 2 ? args[2] : false ));
                 return `Added a insights display to <#${args[1].replace("<#", "").replace(">", "")}>`
             case 'disable':
                 await localParameters.del(`statusgen-${msg.guildID}`)
@@ -709,16 +709,19 @@ function registerEntities() {
         })
     }
 }
-async function updateStatus(input, forceUpdate, guildID, channelID) {
-    if (!activeRefresh) {
-        activeRefresh = true;
-        let data
+async function updateStatus(input, forceUpdate, guildID, channelID, mode) {
+    if (!activeRefresh[guildID]) {
+        activeRefresh[guildID] = true;
+        let data = {};
         try {
             data = await localParameters.getItem('statusgen-' + guildID)
         } catch (e) {
             console.error("Failed to get guild local parameters")
         }
         let channel;
+        if (mode) {
+            data.mode = mode;
+        }
         if (channelID) {
             channel = channelID
         } else if (data && data.channel) {
@@ -833,6 +836,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
                     localParameters.setItem('statusgen-' + guildID, {
                         channel: msg.channel.id,
                         message: msg.id,
+                        mode: mode || undefined
                     })
                 })
                 .catch(e => {
@@ -846,14 +850,14 @@ async function updateStatus(input, forceUpdate, guildID, channelID) {
                 .then(async msg => {
                     await localParameters.setItem('statusgen-' + guildID, {
                         channel: msg.channel.id,
-                        message: msg.id,
+                        message: msg.id
                     })
                 })
                 .catch(e => {
                     console.error(e)
                 });
         }
-        activeRefresh = false;
+        activeRefresh[guildID] = false;
     }
 }
 
