@@ -154,6 +154,30 @@ discordClient.registerCommand("status", async function (msg,args) {
     usage: "command [arguments]",
     guildOnly: true
 })
+discordClient.registerCommand("channel", async function (msg,args) {
+    if (args.length > 0) {
+        switch (args[0]) {
+            case 'enable':
+                updateChannel(undefined, true, msg.guildID, args[1].replace("<#", "").replace(">", ""), (args.length >= 2 ? args.slice(2).join(" ") : false ));
+                return `Setup a status indicator display for <#${args[1].replace("<#", "").replace(">", "")}>`
+            case 'disable':
+                await localParameters.del(`channelname-${msg.guildID}`)
+                return "Disabled Status Indicator for this guild, Please rename the channel"
+            default:
+                return "Invalid Command"
+        }
+    } else {
+        return `Missing command, use "help status"`
+    }
+}, {
+    argsRequired: false,
+    caseInsensitive: false,
+    description: "Channel Status Indicator Controls",
+    fullDescription: "Enable/Disable Status Indicator\n" +
+        "   **enable** - Add an Status Indicator to this server\n      channel\n**disable** - Removes a Status Indicator for this server\n      [system]",
+    usage: "command [arguments]",
+    guildOnly: true
+})
 
 app.use(express.json({limit: '20mb'}));
 app.use(express.urlencoded({extended : true, limit: '20mb'}));
@@ -669,6 +693,11 @@ async function updateIndicators() {
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
                         }, true, guild.id)
+                    } else if (localKeys.indexOf("channelname-" + guild.id) !== -1 ) {
+                        updateChannel({
+                            warnings: watchDogWarnings,
+                            faults: watchDogFaults
+                        }, true, guild.id)
                     }
                 })
             })
@@ -711,6 +740,62 @@ function registerEntities() {
             });
             console.log('Registered Clusters')
         })
+    }
+}
+async function updateChannel(input, forceUpdate, guildID, channelID, name) {
+    let data = {};
+    try {
+        data = await localParameters.getItem('channelname-' + guildID)
+    } catch (e) {
+        console.error("Failed to get guild local parameters")
+    }
+    let channel;
+    if (channelID) {
+        channel = channelID
+    } else if (data && data.channel) {
+        channel = data.channel
+    } else {
+        return false;
+    }
+    let channelName = "";
+    if (alarminhibited)
+        channelName += "🔕"
+    if (input && input.warnings.length > 2) {
+        channelName += "🟠";
+    } else if (input && input.warnings.length > 0) {
+        channelName += "🟡";
+    } else if (input && input.faults.length > 2) {
+        channelName += "🆘"
+    } else if (!input || (input && input.faults.length > 0)) {
+        channelName += "🔴"
+    } else {
+        channelName += "🟢"
+    }
+    let baseName = "";
+    if (name) {
+        channelName += name;
+        baseName += name;
+    } else if (data && data.name) {
+        channelName += data.name;
+        baseName += data.name;
+    }
+    const channeState = await discordClient.getChannel(channel);
+    if (channeState && channeState.name && channeState.name !== channelName) {
+        discordClient.editChannel(channel, {
+            name: channelName,
+            reason: "Update Status Indicator"
+        })
+            .then(msg => {
+                localParameters.setItem('channelname-' + guildID, {
+                    channel: msg.channel.id,
+                    name: baseName
+                })
+            })
+            .catch(e => {
+                console.error(e)
+            });
+    } else {
+
     }
 }
 async function updateStatus(input, forceUpdate, guildID, channelID, mode) {
