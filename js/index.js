@@ -693,7 +693,8 @@ async function updateIndicators() {
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
                         }, true, guild.id)
-                    } else if (localKeys.indexOf("channelname-" + guild.id) !== -1 ) {
+                    }
+                    if (localKeys.indexOf("channelname-" + guild.id) !== -1 ) {
                         updateChannel({
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
