@@ -698,7 +698,7 @@ async function updateIndicators() {
                         updateChannel({
                             warnings: watchDogWarnings,
                             faults: watchDogFaults
-                        }, true, guild.id)
+                        }, false, guild.id)
                     }
                 })
             })
@@ -780,8 +780,14 @@ async function updateChannel(input, forceUpdate, guildID, channelID, name) {
         channelName += data.name;
         baseName += data.name;
     }
+    if (!data && forceUpdate) {
+        localParameters.setItem('channelname-' + guildID, {
+            channel: channel,
+            name: baseName
+        })
+    }
     const channeState = await discordClient.getChannel(channel);
-    if (channeState && channeState.name && channeState.name !== channelName) {
+    if (channeState && channeState.name && (forceUpdate || channeState.name !== channelName)) {
         discordClient.editChannel(channel, {
             name: channelName,
             reason: "Update Status Indicator"
