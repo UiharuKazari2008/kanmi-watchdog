@@ -785,9 +785,9 @@ async function updateChannel(input, forceUpdate, guildID, channelID, name) {
             name: channelName,
             reason: "Update Status Indicator"
         })
-            .then(msg => {
+            .then(channel => {
                 localParameters.setItem('channelname-' + guildID, {
-                    channel: msg.channel.id,
+                    channel: channel.id,
                     name: baseName
                 })
             })
