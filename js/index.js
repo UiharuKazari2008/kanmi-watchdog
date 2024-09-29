@@ -78,10 +78,10 @@ const discordClient = new eris.CommandClient(systemglobal.Discord_Key, {
     compress: true,
     restMode: true,
 }, {
-    name: "Shutaura Watchdog",
-    description: "Log and Watchdog Framework",
+    name: "ImpactX",
+    description: "ImpactX Status and Cluster Manager",
     owner: "Yukimi Kazari",
-    prefix: "!watchdog ",
+    prefix: "ix ",
     restMode: true,
 });
 
@@ -826,7 +826,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID, mode) {
         let embed = {
             "title": "✅ Systems Operating Normally",
             "footer": {
-                "text": `System Status`,
+                "text": `💥 ImpactX Status`,
                 "icon_url": discordClient.guilds.get(guildID).iconURL
             },
             "timestamp": (new Date().toISOString()) + "",
