@@ -796,7 +796,7 @@ async function updateChannel(input, forceUpdate, guildID, channelID, name) {
                 console.error(e)
             });
     } else {
-
+        console.error(channel, channelName, channeState);
     }
 }
 async function updateStatus(input, forceUpdate, guildID, channelID, mode) {
