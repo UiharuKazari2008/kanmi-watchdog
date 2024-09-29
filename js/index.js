@@ -761,14 +761,14 @@ async function updateChannel(input, forceUpdate, guildID, channelID, name) {
     let channelName = "";
     if (alarminhibited)
         channelName += "🔕"
-    if (input && input.warnings.length > 2) {
-        channelName += "🟠";
-    } else if (input && input.warnings.length > 0) {
-        channelName += "🟡";
-    } else if (input && input.faults.length > 2) {
+    if (input && input.faults.length > 2) {
         channelName += "🆘"
     } else if (!input || (input && input.faults.length > 0)) {
         channelName += "🔴"
+    } else if (input && input.warnings.length > 2) {
+        channelName += "🟠";
+    } else if (input && input.warnings.length > 0) {
+        channelName += "🟡";
     } else {
         channelName += "🟢"
     }
