@@ -63,12 +63,15 @@ const startTime = new Date().getTime();
 let activeRefresh = {};
 let watchdogs = new Map();
 let clusters = new Map();
+let pingEntities = new Map();
 let watchdogsEntities = new Map();
 let clusterEntities = new Map();
 let clusterActive = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
 let watchdogsWarn = new Map();
+let pingDead = new Map();
+let pingWarn = new Map();
 let clusterReady = new Map();
 let clusterDead = new Map();
 let alarminhibited = false;
@@ -392,6 +395,50 @@ async function checkServer(url, options) {
     }
 }
 
+async function runPingTests() {
+    if (watchdogConfig.Ping_Hosts) {
+        await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
+            return promiseChain.then(() => new Promise(async (ok) => {
+                let res = await ping.promise.probe(host.ip, {
+                    timeout: host.timeout || 5,
+                    extra: ['-i', '3'],
+                });
+
+                let data = pingEntities.get(`ping-${host.ip}`);
+                if (!data)
+                    data = { time: new Date().getTime() }
+                if (parseFloat(res.packetLoss) === 100) {
+                    data.packetLoss = res.packetLoss
+                } else {
+                    data.time = new Date().getTime()
+                    data.packetLoss = res.packetLoss
+                }
+                pingEntities.set(`ping-${host.ip}`, data);
+                ok();
+            }))
+        }, Promise.resolve());
+    }
+    if (watchdogConfig.Ping_HTTP) {
+        await Array.from(watchdogConfig.Ping_HTTP).reduce((promiseChain, host) => {
+            return promiseChain.then(() => new Promise(async (ok) => {
+                let res = await checkServer(host.url, {
+                    timeout: host.timeout || 5
+                });
+
+                let data = pingEntities.get(`httpcheck-${md5(host.url)}`);
+                if (!data)
+                    data = { time: new Date().getTime() }
+                if (res.ok) {
+                    data.time = new Date().getTime()
+                    data.duration = res.duration
+                }
+                pingEntities.set(`ping-${host.ip}`, data);
+                ok();
+            }))
+        }, Promise.resolve());
+    }
+    setTimeout(runPingTests, 45000)
+}
 async function updateIndicators() {
     let mainFaults = [];
     let addUptimeWarning = false;
@@ -569,13 +616,10 @@ async function updateIndicators() {
     if (watchdogConfig.Ping_Hosts) {
         await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
-                let res = await ping.promise.probe(host.ip, {
-                    timeout: host.timeout || 5,
-                    extra: ['-i', '3'],
-                });
-                const _wS = watchdogsDead.get(`ping-${host.ip}`);
-                const _wW = watchdogsWarn.get(`ping-${host.ip}`);
-                if (parseFloat(res.packetLoss) === 100 && !watchdogsWarn.has(`ping-${host.ip}`)) {
+                const _wS = watchdogsEntities.get(`ping-${host.ip}`);
+                const _tS = (_wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
+
+                if (_wS.time && _tS >= 4.8) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
@@ -592,10 +636,10 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                    mainFaults.push(`${host.name} is offline!`);
-                } else if (parseFloat(res.packetLoss) > 0) {
+                    mainFaults.unshift(`${host.name} is offline!`);
+                } else if (!_wS.time || parseFloat(_wS.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
-                    watchDogWarnings.push(`⚠️ ${host.name} has a unstable link!`)
+                    watchDogWarnings.push(`⚠️ ${host.name} is dropping packets!`)
                     watchdogsWarn.set(`ping-${host.ip}`, true)
                 } else {
                     pingResults.push(`🟩 ${host.name}`);
@@ -621,12 +665,10 @@ async function updateIndicators() {
     if (watchdogConfig.Ping_HTTP) {
         await Array.from(watchdogConfig.Ping_HTTP).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
-                let res = await checkServer(host.url, {
-                    timeout: host.timeout || 5
-                });
-                const _wS = watchdogsDead.get(`httpcheck-${md5(host.url)}`);
-                const _wW = watchdogsWarn.get(`httpcheck-${md5(host.url)}`);
-                if (!res.ok && !watchdogsWarn.has(`httpcheck-${md5(host.url)}`)) {
+                const _wS = watchdogsEntities.get(`httpcheck-${md5(host.url)}`);
+                const _tS = (_wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
+
+                if (_wS.time && _tS >= 4.8) {
                     httpResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
@@ -644,7 +686,7 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.push(`${host.name} is offline!`);
-                } else if (res.duration >= 2000) {
+                } else if (!_wS.time || _wS.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
@@ -956,6 +998,7 @@ async function updateStatus(input, forceUpdate, guildID, channelID, mode) {
 }
 
 registerEntities();
+runPingTests()
 setTimeout(() => {
     watchdogConfig.Discord_Status.forEach(w => {
         w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startTime); } });
