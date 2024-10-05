@@ -425,7 +425,7 @@ async function runPingTests() {
 
                 let data = pingEntities.get(`ping-${host.ip}`);
                 if (!data)
-                    data = { time: new Date().getTime() }
+                    data = { time: new Date().getTime(), packetLoss: 100 }
                 if (parseFloat(res.packetLoss) === 100) {
                     data.packetLoss = res.packetLoss
                 } else {
@@ -446,12 +446,12 @@ async function runPingTests() {
 
                 let data = pingEntities.get(`httpcheck-${md5(host.url)}`);
                 if (!data)
-                    data = { time: new Date().getTime() }
+                    data = { time: new Date().getTime(), duration: 5000 }
                 if (res.ok) {
                     data.time = new Date().getTime()
                     data.duration = res.duration
                 }
-                pingEntities.set(`ping-${host.ip}`, data);
+                pingEntities.set(`httpcheck-${host.ip}`, data);
                 ok();
             }))
         }, Promise.resolve());
