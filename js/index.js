@@ -745,10 +745,10 @@ async function updateIndicators() {
         }, Promise.resolve());
     }
     if (watchdogConfig.Minimize_Ping_Hosts && pingsReponding > 0) {
-        if (Array.from(watchdogConfig.Ping_HTTP).length === hostsReponding) {
-            pingResults.push(`🟩 ${pingsReponding} Online`);
+        if (Array.from(watchdogConfig.Ping_HTTP).length === pingsReponding) {
+            pingResults.push(`🟩 ${pingsReponding} Connections Online`);
         } else {
-            pingResults.push(`🔶 ${pingsReponding} Online`);
+            pingResults.push(`🔶 ${pingsReponding} Connections Online`);
         }
     }
     if (watchdogConfig.Ping_HTTP) {
@@ -828,9 +828,9 @@ async function updateIndicators() {
     }
     if (watchdogConfig.Minimize_Ping_HTTP && hostsReponding > 0) {
         if (Array.from(watchdogConfig.Ping_HTTP).length === hostsReponding) {
-            pingResults.push(`✅ ${hostsReponding} Services Available`);
+            httpResults.push(`✅ ${hostsReponding} Services Available`);
         } else {
-            pingResults.push(`🔶 ${hostsReponding} Services Available`);
+            httpResults.push(`🔶 ${hostsReponding} Services Available`);
         }
     }
     if (messageWarnEntities.size > 0) {
