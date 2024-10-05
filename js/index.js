@@ -639,10 +639,10 @@ async function updateIndicators() {
     if (watchdogConfig.Ping_Hosts) {
         await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
-                const _wS = watchdogsEntities.get(`ping-${host.ip}`);
-                const _tS = (_wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
+                const _wS = pingEntities.get(`ping-${host.ip}`);
+                const _tS = (_wS && _wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
 
-                if (_wS.time && _tS >= 4.8) {
+                if (_wS && _wS.time && _tS >= 4.8) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
@@ -660,7 +660,7 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.unshift(`${host.name} is offline!`);
-                } else if (!_wS.time || parseFloat(_wS.packetLoss) > 0) {
+                } else if (!_wS || !_wS.time || parseFloat(_wS.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is dropping packets!`)
                     watchdogsWarn.set(`ping-${host.ip}`, true)
@@ -688,10 +688,10 @@ async function updateIndicators() {
     if (watchdogConfig.Ping_HTTP) {
         await Array.from(watchdogConfig.Ping_HTTP).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
-                const _wS = watchdogsEntities.get(`httpcheck-${md5(host.url)}`);
-                const _tS = (_wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
+                const _wS = pingEntities.get(`httpcheck-${md5(host.url)}`);
+                const _tS = (_wS && _wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
 
-                if (_wS.time && _tS >= 4.8) {
+                if (_wS && _wS.time && _tS >= 4.8) {
                     httpResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
@@ -709,7 +709,7 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.push(`${host.name} is offline!`);
-                } else if (!_wS.time || _wS.duration >= 2000) {
+                } else if (!_wS && !_wS.time || _wS.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
