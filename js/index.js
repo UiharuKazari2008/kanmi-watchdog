@@ -451,7 +451,7 @@ async function runPingTests() {
                     data.time = new Date().getTime()
                     data.duration = res.duration
                 }
-                pingEntities.set(`httpcheck-${host.ip}`, data);
+                pingEntities.set(`httpcheck-${md5(host.url)}`, data);
                 ok();
             }))
         }, Promise.resolve());
