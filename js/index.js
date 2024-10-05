@@ -882,6 +882,7 @@ async function updateIndicators() {
                         updateStatus({
                             watchdogWarning, clusterWarning,
                             watchdogFault, clusterFault,
+                            summery: summeryList,
                             status: watchDogEntites,
                             cluster: clusterEntites,
                             pings: pingResults,
@@ -1082,6 +1083,12 @@ async function updateStatus(input, forceUpdate, guildID, channelID, mode) {
             embed.fields.unshift({
                 "name": `⛔ Active Alarms`,
                 "value": faults.join('\n').substring(0, 1024)
+            })
+        }
+        if (input && input.summery.length > 0) {
+            embed.fields.push({
+                "name": `📊 Datacenter Overview`,
+                "value": input.summery.join('\n').substring(0, 1024)
             })
         }
 
