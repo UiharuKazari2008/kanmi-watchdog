@@ -64,14 +64,14 @@ let activeRefresh = {};
 let watchdogs = new Map();
 let clusters = new Map();
 let pingEntities = new Map();
+let messageWarnEntities = new Map();
+let messageFailEntities = new Map();
 let watchdogsEntities = new Map();
 let clusterEntities = new Map();
 let clusterActive = new Map();
 let watchdogsReady = new Map();
 let watchdogsDead = new Map();
 let watchdogsWarn = new Map();
-let pingDead = new Map();
-let pingWarn = new Map();
 let clusterReady = new Map();
 let clusterDead = new Map();
 let alarminhibited = false;
@@ -191,6 +191,25 @@ app.use(function(req, res, next) {
 });
 app.get('/', function (req, res, next) {
     res.status(200).send('<b>Kanmi Watchdog v1</b>')
+});
+app.get("/watchdog/data", function(req, res, next) {
+    if (req.query.id) {
+        try {
+            if (req.query.warn) {
+                const data = JSON.parse(decodeURIComponent(req.query.warn));
+                messageWarnEntities.set(req.query.id, data);
+            }
+            if (req.query.fail) {
+                const data = JSON.parse(decodeURIComponent(req.query.fail));
+                messageFailEntities.set(req.query.id, data);
+            }
+            res.status(200).send('Data stored');
+        } catch (e) {
+            res.status(500).send('Failed to parse your data block');
+        }
+    } else {
+        res.status(404).send('Missing ID')
+    }
 });
 app.get("/watchdog/ping", function(req, res, next) {
     if (req.query.id && req.query.entity && watchdogs.has(req.query.id) + '') {
@@ -446,8 +465,10 @@ async function updateIndicators() {
     let watchDogFaults = [];
     let watchDogEntites = [];
     let clusterEntites = [];
+    let remoteWarning = false;
     let watchdogWarning = false;
     let clusterWarning = false;
+    let remoteFault = false;
     let watchdogFault = false;
     let clusterFault = false;
     await watchdogs.forEach(w => {
@@ -549,7 +570,9 @@ async function updateIndicators() {
                             clusterDead.set(`${c.id}-${e}`, true);
                         }
                     }
-                    mainFaults.push(`${c.name} Cluster Node has failed!`);
+                    if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
+                        mainFaults.push(`${c.name} Cluster Node has failed!`);
+                    }
                     _watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (_tS >= (ei.warn_time || 3)) {
                     statusIcons += '🟧'
@@ -710,6 +733,18 @@ async function updateIndicators() {
                 ok();
             }))
         }, Promise.resolve());
+    }
+    if (messageWarnEntities.size > 0) {
+        await Array.from(messageWarnEntities.keys()).forEach(e => {
+            watchDogWarnings.unshift(...e.map(f => "⚠️ " + f));
+            remoteWarning = true;
+        })
+    }
+    if (messageWarnEntities.size > 0) {
+        await Array.from(messageWarnEntities.keys()).forEach(e => {
+            watchDogFaults.unshift(...e.map(f => "❌ " + f));
+            remoteFault = true;
+        })
     }
     if (mainFaults.length > 0) {
         topState = false;
