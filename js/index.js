@@ -674,7 +674,7 @@ async function updateIndicators() {
             clusterWarning = true;
             watchDogFaults.push(..._watchDogFaults);
         }
-        if (!watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
+        if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
             clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
         }
     })
