@@ -745,7 +745,7 @@ async function updateIndicators() {
         }, Promise.resolve());
     }
     if (watchdogConfig.Minimize_Ping_Hosts && pingsReponding > 0) {
-        if (Array.from(watchdogConfig.Ping_HTTP).length === pingsReponding) {
+        if (Array.from(watchdogConfig.Ping_Hosts).length === pingsReponding) {
             pingResults.push(`🟩 ${pingsReponding} Connections Online`);
         } else {
             pingResults.push(`🔶 ${pingsReponding} Connections Online`);
