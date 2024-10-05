@@ -433,6 +433,23 @@ async function runPingTests() {
                     data.packetLoss = res.packetLoss
                 }
                 pingEntities.set(`ping-${host.ip}`, data);
+                if (host.fallback_ip) {
+                    let resFallback = await ping.promise.probe(host.fallback_ip, {
+                        timeout: host.timeout || 5,
+                        extra: ['-i', '3'],
+                    });
+
+                    let dataFallback = pingEntities.get(`ping-${host.ip}-fallback`);
+                    if (!dataFallback)
+                        dataFallback = { time: new Date().getTime(), packetLoss: 100 }
+                    if (parseFloat(resFallback.packetLoss) === 100) {
+                        dataFallback.packetLoss = resFallback.packetLoss
+                    } else {
+                        dataFallback.time = new Date().getTime()
+                        dataFallback.packetLoss = resFallback.packetLoss
+                    }
+                    pingEntities.set(`ping-${host.ip}-fallback`, dataFallback);
+                }
                 ok();
             }))
         }, Promise.resolve());
@@ -452,6 +469,20 @@ async function runPingTests() {
                     data.duration = res.duration
                 }
                 pingEntities.set(`httpcheck-${md5(host.url)}`, data);
+                if (host.fallback_url) {
+                    let resFallback = await checkServer(host.fallback_url, {
+                        timeout: host.timeout || 5
+                    });
+
+                    let fallbackdata = pingEntities.get(`httpcheck-${md5(host.url)}-fallback`);
+                    if (!fallbackdata)
+                        fallbackdata = { time: new Date().getTime(), duration: 5000 }
+                    if (resFallback.ok) {
+                        fallbackdata.time = new Date().getTime()
+                        fallbackdata.duration = resFallback.duration
+                    }
+                    pingEntities.set(`httpcheck-${md5(host.url)}-fallback`, fallbackdata);
+                }
                 ok();
             }))
         }, Promise.resolve());
@@ -636,13 +667,39 @@ async function updateIndicators() {
     })
     let pingResults = [];
     let httpResults = [];
+    let pingsReponding = 0;
+    let hostsReponding = 0;
     if (watchdogConfig.Ping_Hosts) {
         await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
                 const _wS = pingEntities.get(`ping-${host.ip}`);
                 const _tS = (_wS && _wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
+                const _fS = pingEntities.get(`ping-${host.ip}-fallback`);
+                const _tF = (_fS && _fS.time) ? ((new Date().getTime() - _fS.time) / 60000).toFixed(2) : 0;
 
-                if (_wS && _wS.time && _tS >= 4.8) {
+                if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8 && host.fail_on_fallback) {
+                    pingResults.push(`🔻 ${host.name}`);
+                    if (!watchdogsDead.has(`ping-${host.ip}`)) {
+                        if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} primary address is not responding!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} primary address is not responding!`, "error")
+                                })
+                        } else {
+                            watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
+                        }
+                    }
+                    watchDogFaults.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    mainFaults.unshift(`${host.name} primary address is offline!`);
+                } else if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8) {
+                    pingResults.push(`🔻 ${host.name}`);
+                    watchDogWarnings.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    watchdogsWarn.set(`ping-${host.ip}`, true)
+                } else if (_wS && _wS.time && _tS >= 4.8) {
                     pingResults.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
@@ -665,7 +722,9 @@ async function updateIndicators() {
                     watchDogWarnings.push(`⚠️ ${host.name} is dropping packets!`)
                     watchdogsWarn.set(`ping-${host.ip}`, true)
                 } else {
-                    pingResults.push(`🟩 ${host.name}`);
+                    pingsReponding++;
+                    if (!watchdogConfig.Minimize_Ping_Hosts)
+                        pingResults.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_success && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
@@ -685,36 +744,69 @@ async function updateIndicators() {
             }))
         }, Promise.resolve());
     }
+    if (watchdogConfig.Minimize_Ping_Hosts && pingsReponding > 0) {
+        if (Array.from(watchdogConfig.Ping_HTTP).length === hostsReponding) {
+            pingResults.push(`🟩 ${pingsReponding} Online`);
+        } else {
+            pingResults.push(`🔶 ${pingsReponding} Online`);
+        }
+    }
     if (watchdogConfig.Ping_HTTP) {
         await Array.from(watchdogConfig.Ping_HTTP).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
                 const _wS = pingEntities.get(`httpcheck-${md5(host.url)}`);
                 const _tS = (_wS && _wS.time) ? ((new Date().getTime() - _wS.time) / 60000).toFixed(2) : 0;
+                const _fS = pingEntities.get(`httpcheck-${host.ip}-fallback`);
+                const _tF = (_fS && _fS.time) ? ((new Date().getTime() - _fS.time) / 60000).toFixed(2) : 0;
 
-                if (_wS && _wS.time && _tS >= 4.8) {
-                    httpResults.push(`🟥 ${host.name}`);
+                if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8 && host.fail_on_fallback) {
+                    httpResults.push(`🔻 ${host.name}`);
                     if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
-                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} primary is inaccessible!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} primary is inaccessible!`, "error")
+                                })
+                        } else {
+                            watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
+                        }
+                    }
+                    watchDogFaults.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    mainFaults.push(`${host.name} primary is inaccessible!`);
+                } else if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8) {
+                    httpResults.push(`🔻 ${host.name}`);
+                    watchDogWarnings.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
+                    watchdogsWarn.set(`ping-${host.ip}`, true)
+                } else if (_wS && _wS.time && _tS >= 4.8) {
+                    httpResults.push(`🟥 ${host.name}`);
+                    if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
+                        if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
+                            discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is inaccessible!`)
+                                .catch(err => {
+                                    Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
+                                })
+                                .then(() => {
+                                    watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
+                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is inaccessible!`, "error")
                                 })
                         } else {
                             watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
                         }
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                    mainFaults.push(`${host.name} is offline!`);
+                    mainFaults.push(`${host.name} is inaccessible!`);
                 } else if (!_wS || !_wS.time || _wS.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
                 } else {
-                    httpResults.push(`🟩 ${host.name}`);
+                    hostsReponding++;
+                    if (!watchdogConfig.Minimize_Ping_HTTP)
+                        httpResults.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_success && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
@@ -723,7 +815,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.delete(`httpcheck-${md5(host.url)}`);
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                    Logger.printLine("StatusUpdate", `🎉 ${host.name} is responding now!`, "error")
                                 })
                         }
                     }
@@ -733,6 +825,13 @@ async function updateIndicators() {
                 ok();
             }))
         }, Promise.resolve());
+    }
+    if (watchdogConfig.Minimize_Ping_HTTP && hostsReponding > 0) {
+        if (Array.from(watchdogConfig.Ping_HTTP).length === hostsReponding) {
+            pingResults.push(`✅ ${hostsReponding} Services Available`);
+        } else {
+            pingResults.push(`🔶 ${hostsReponding} Services Available`);
+        }
     }
     if (messageWarnEntities.size > 0) {
         await Array.from(messageWarnEntities.keys()).forEach(e => {
