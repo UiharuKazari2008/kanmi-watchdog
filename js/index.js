@@ -709,7 +709,7 @@ async function updateIndicators() {
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     mainFaults.push(`${host.name} is offline!`);
-                } else if (!_wS && !_wS.time || _wS.duration >= 2000) {
+                } else if (!_wS || !_wS.time || _wS.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
