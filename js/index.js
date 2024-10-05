@@ -492,6 +492,7 @@ async function runPingTests() {
 async function updateIndicators() {
     let mainFaults = [];
     let addUptimeWarning = false;
+    let summeryList = [];
     let watchDogWarnings = [];
     let watchDogFaults = [];
     let watchDogEntites = [];
@@ -502,13 +503,17 @@ async function updateIndicators() {
     let remoteFault = false;
     let watchdogFault = false;
     let clusterFault = false;
+    let servicesReponding = 0;
+    let servicesTotal = 0;
     await watchdogs.forEach(w => {
         let statusIcons =  ``;
+        let hostsReponding = 0;
         if (!addUptimeWarning && process.uptime() <= 15 * 60) {
             watchDogWarnings.push(`🔕 Watchdog system was reset <t:${bootTime}:R>!`)
             addUptimeWarning = true
         }
         w.entities.forEach(e => {
+            servicesTotal++;
             if (e.startsWith("_")) {
                 statusIcons += e.substring(1)
             }
@@ -557,12 +562,15 @@ async function updateIndicators() {
                     }
                     watchDogWarnings.push(`♻️ Entity ${e}:${w.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
                 } else {
+                    hostsReponding++;
+                    servicesReponding++;
                     statusIcons += '🟩'
                     watchdogsDead.delete(`${w.id}-${e}`);
                 }
             }
         })
-        watchDogEntites.push(`${w.header}${w.name}: ${statusIcons}`);
+        if (!watchdogConfig.Minimize_Watchdog || hostsReponding !== w.entities.length)
+            watchDogEntites.push(`${w.header}${w.name}: ${statusIcons}`);
     })
     await clusters.forEach(c => {
         let statusIcons =  ``;
@@ -570,6 +578,7 @@ async function updateIndicators() {
         let onlineNodes = 0;
         let _watchDogFaults = [];
         c.entities.forEach(ei => {
+            servicesTotal++;
             const e = ei.id
             if (e.startsWith("_")) {
                 statusIcons += e.substring(1)
@@ -635,6 +644,7 @@ async function updateIndicators() {
 
                     watchDogWarnings.push(`♻️ ${c.name} Cluster Node ${ei.name} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
                     onlineNodes++;
+                    servicesReponding++;
                 } else {
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
                         statusIcons += '✅'
@@ -644,6 +654,7 @@ async function updateIndicators() {
                     }
                     clusterDead.delete(`${c.id}-${e}`);
                     onlineNodes++;
+                    servicesReponding++;
                 }
             }
         })
@@ -663,8 +674,17 @@ async function updateIndicators() {
             clusterWarning = true;
             watchDogFaults.push(..._watchDogFaults);
         }
-        clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
+        if (!watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
+            clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
+        }
     })
+    if (watchdogConfig.Show_Overview && servicesReponding > 0) {
+        if (servicesTotal === servicesReponding) {
+            summeryList.push(`✅ ${servicesReponding} Services Running`);
+        } else {
+            summeryList.push(`⚠️ ${servicesReponding} Services Running`);
+        }
+    }
     let pingResults = [];
     let httpResults = [];
     let pingsReponding = 0;
@@ -744,13 +764,6 @@ async function updateIndicators() {
             }))
         }, Promise.resolve());
     }
-    if (watchdogConfig.Minimize_Ping_Hosts && pingsReponding > 0) {
-        if (Array.from(watchdogConfig.Ping_Hosts).length === pingsReponding) {
-            pingResults.push(`🟩 ${pingsReponding} Connections Online`);
-        } else {
-            pingResults.push(`🔶 ${pingsReponding} Connections Online`);
-        }
-    }
     if (watchdogConfig.Ping_HTTP) {
         await Array.from(watchdogConfig.Ping_HTTP).reduce((promiseChain, host) => {
             return promiseChain.then(() => new Promise(async (ok) => {
@@ -828,9 +841,16 @@ async function updateIndicators() {
     }
     if (watchdogConfig.Minimize_Ping_HTTP && hostsReponding > 0) {
         if (Array.from(watchdogConfig.Ping_HTTP).length === hostsReponding) {
-            httpResults.push(`✅ ${hostsReponding} Services Available`);
+            summeryList.push(`✅ ${hostsReponding} Services Accessible`);
         } else {
-            httpResults.push(`🔶 ${hostsReponding} Services Available`);
+            summeryList.push(`⚠️ ${hostsReponding} Services Accessible`);
+        }
+    }
+    if (watchdogConfig.Minimize_Ping_Hosts && pingsReponding > 0) {
+        if (Array.from(watchdogConfig.Ping_Hosts).length === pingsReponding) {
+            summeryList.push(`✅ ${pingsReponding} Connections Online`);
+        } else {
+            summeryList.push(`⚠️ ${pingsReponding} Connections Online`);
         }
     }
     if (messageWarnEntities.size > 0) {
