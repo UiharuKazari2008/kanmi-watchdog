@@ -666,6 +666,7 @@ async function updateIndicators() {
             }
         })
         if (activeNode === '🔎') {
+            mainFaults.push(`${c.name} Cluster Failure`);
             watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new node...`);
             clusterWarning = true;
             clusterActive.set(c.id, false);
@@ -673,10 +674,12 @@ async function updateIndicators() {
             watchDogFaults.push(..._watchDogFaults);
         }
         if (onlineNodes === 0) {
+            mainFaults.push(`${c.name} Cluster Stopped`);
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
             clusterFault = true;
             watchDogFaults.push(..._watchDogFaults);
         } else if (onlineNodes <= 1) {
+            mainFaults.push(`${c.name} Cluster Redundancy Fault`);
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
             clusterWarning = true;
             watchDogFaults.push(..._watchDogFaults);
