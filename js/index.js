@@ -22,7 +22,7 @@ docutrol@acr.moe - 301-399-3671 - docs.acr.moe/docutrol
 
 const systemglobal = require('../config.json');
 const watchdogConfig = require('../watchdog.config.json');
-const facilityName = 'Discord-Watchdog';
+const facilityName = 'ClusterManager';
 
 const eris = require('eris');
 const colors = require('colors');
@@ -490,6 +490,12 @@ async function runPingTests() {
     setTimeout(runPingTests, 45000)
 }
 async function updateIndicators() {
+    let publishData = {
+        entites: [],
+        cluster: [],
+        ping: [],
+        http: [],
+    };
     let mainFaults = [];
     let addUptimeWarning = false;
     let summeryList = [];
@@ -571,6 +577,7 @@ async function updateIndicators() {
         })
         if (!watchdogConfig.Minimize_Watchdog || hostsReponding !== w.entities.length)
             watchDogEntites.push(`${w.header}${w.name}: ${statusIcons}`);
+        publishData.entites.push(`${w.header}${w.name}: ${statusIcons}`);
     })
     await clusters.forEach(c => {
         let statusIcons =  ``;
@@ -676,6 +683,7 @@ async function updateIndicators() {
         }
         if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
             clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
+        publishData.cluster.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
         }
     })
     if (watchdogConfig.Show_Overview && servicesReponding > 0) {
@@ -745,6 +753,7 @@ async function updateIndicators() {
                     pingsReponding++;
                     if (!watchdogConfig.Minimize_Ping_Hosts)
                         pingResults.push(`🟩 ${host.name}`);
+                    publishData.ping.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_success && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
@@ -820,6 +829,7 @@ async function updateIndicators() {
                     hostsReponding++;
                     if (!watchdogConfig.Minimize_Ping_HTTP)
                         httpResults.push(`🟩 ${host.name}`);
+                    publishData.http.push(`🟩 ${host.name}`);
                     if (watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_success && !alarminhibited) {
                             discordClient.createMessage(watchdogConfig.Discord_Notify_Channel, `🎉 ${host.name} is responding now!`)
@@ -874,6 +884,14 @@ async function updateIndicators() {
         topState = true;
         topMessage = "Systems Operating Normally"
     }
+    Logger.sendData({
+        message: topMessage,
+        publishData,
+        watchdogWarning, clusterWarning,
+        watchdogFault, clusterFault,
+        warnings: watchDogWarnings,
+        faults: watchDogFaults
+    }, true)
     localParameters.keys().then((localKeys) => {
         discordClient.getRESTGuilds()
             .then(function (guilds) {
@@ -911,7 +929,7 @@ function registerEntities() {
             entities: w.watchdogs
         });
         w.watchdogs.forEach(e => { watchdogsEntities.set(`${w.id}-${e}`, startTime); });
-        console.log('Registered Entities')
+        Logger.printLine("Init", 'Registered Entities', "debug")
     })
     if (watchdogConfig.Cluster_Groups) {
         watchdogConfig.Cluster_Groups.forEach(async c => {
@@ -936,7 +954,7 @@ function registerEntities() {
             c.systems.forEach(e => {
                 clusterEntities.set(`${c.id}-${e.id}`, startTime);
             });
-            console.log('Registered Clusters')
+            Logger.printLine("Init", 'Registered Clusters', "debug")
         })
     }
 }
@@ -1163,7 +1181,7 @@ runPingTests()
 setTimeout(() => {
     watchdogConfig.Discord_Status.forEach(w => {
         w.watchdogs.forEach(e => { if (!watchdogsReady.has(`${w.id}-${e}`)) { watchdogsReady.set(`${w.id}-${e}`, startTime); } });
-        console.log('Registered Ready Entities')
+        Logger.printLine("DelayInit", 'Registered Ready Entities', "debug")
     })
 }, 30.1 * 60000)
 setInterval(updateIndicators, 60000);
