@@ -885,12 +885,14 @@ async function updateIndicators() {
         topMessage = "Systems Operating Normally"
     }
     Logger.sendData({
-        message: topMessage,
-        publishData,
-        watchdogWarning, clusterWarning,
-        watchdogFault, clusterFault,
-        warnings: watchDogWarnings,
-        faults: watchDogFaults
+        watchdog: {
+            message: topMessage,
+            publishData,
+            watchdogWarning, clusterWarning,
+            watchdogFault, clusterFault,
+            warnings: watchDogWarnings,
+            faults: watchDogFaults
+        }
     }, true)
     localParameters.keys().then((localKeys) => {
         discordClient.getRESTGuilds()
