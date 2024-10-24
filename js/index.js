@@ -665,23 +665,23 @@ async function updateIndicators() {
                 }
             }
         })
-        if (activeNode === '🔎') {
-            mainFaults.push(`${c.name} Cluster Failure`);
-            watchDogFaults.push(`🔎 Cluster ${c.name} is searching for a new node...`);
-            clusterWarning = true;
-            clusterActive.set(c.id, false);
-            localParameters.removeItem('clusterActive-' + c.id);
-            watchDogFaults.push(..._watchDogFaults);
-        }
         if (onlineNodes === 0) {
-            mainFaults.push(`${c.name} Cluster Stopped`);
+            mainFaults.unshift(`${c.name} Cluster Stopped`);
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
             clusterFault = true;
             watchDogFaults.push(..._watchDogFaults);
         } else if (onlineNodes <= 1) {
-            mainFaults.push(`${c.name} Cluster Redundancy Fault`);
+            mainFaults.unshift(`${c.name} Cluster Redundancy Fault`);
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
             clusterWarning = true;
+            watchDogFaults.push(..._watchDogFaults);
+        }
+        if (activeNode === '🔎') {
+            mainFaults.unshift(`${c.name} Cluster Failure`);
+            watchDogFaults.unshift(`🔎 Cluster ${c.name} is searching for a new node...`);
+            clusterWarning = true;
+            clusterActive.set(c.id, false);
+            localParameters.removeItem('clusterActive-' + c.id);
             watchDogFaults.push(..._watchDogFaults);
         }
         if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
