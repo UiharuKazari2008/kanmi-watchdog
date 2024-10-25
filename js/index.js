@@ -667,7 +667,7 @@ async function updateIndicators() {
                 }
             }
         })
-        if (clusterAlarmsSent[c.id])
+        if (!clusterAlarmsSent[c.id])
             clusterAlarmsSent[c.id] = {}
         if (onlineNodes === 0) {
             if (clusterAlarmsSent[c.id].no_redun)
