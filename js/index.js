@@ -414,6 +414,8 @@ async function checkServer(url, options) {
     }
 }
 
+let clusterAlarmsSent = {};
+
 async function runPingTests() {
     if (watchdogConfig.Ping_Hosts) {
         await Array.from(watchdogConfig.Ping_Hosts).reduce((promiseChain, host) => {
@@ -541,7 +543,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`${w.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} may be dead! It's missed its checkin window!`, "error")
+                                    Logger.printLine("StatusUpdate", `Entity ${w.id}/${e} is possibly dead!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         } else {
                             watchdogsDead.set(`${w.id}-${e}`, true);
@@ -560,7 +562,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`${w.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${e}:${w.id} has reset!`, "warning")
+                                    Logger.printLine("StatusUpdate", `Entity ${w.id}/${e} has reset!`, "notice")
                                 })
                         } else {
                             watchdogsDead.set(`${w.id}-${e}`, true);
@@ -608,7 +610,7 @@ async function updateIndicators() {
                                         Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
                                     })
                                     .then(() => {
-                                        Logger.printLine("StatusUpdate", `${c.name} Cluster Node ${ei.name}  was kicked from active role! It's missed its checkin window!`, "error")
+                                        Logger.printLine("StatusUpdate", `${c.name} Cluster Node ${ei.name} was kicked from its active role!`, "notice", undefined, undefined, false, "alarm-red")
                                     })
                             } else {
                                 clusterDead.set(`${c.id}-${e}`, true);
@@ -642,7 +644,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     clusterDead.set(`${c.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Cluster Node ${e}:${c.id} has reset!`, "warning")
+                                    Logger.printLine("StatusUpdate", `Cluster Node ${c.id}/${e} has reset!`, "alert")
                                 })
                         } else {
                             clusterDead.set(`${c.id}-${e}`, true);
@@ -665,16 +667,30 @@ async function updateIndicators() {
                 }
             }
         })
+        if (clusterAlarmsSent[c.id])
+            clusterAlarmsSent[c.id] = {}
         if (onlineNodes === 0) {
             mainFaults.unshift(`${c.name} Cluster Stopped`);
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
             clusterFault = true;
             watchDogFaults.push(..._watchDogFaults);
+            if (!clusterAlarmsSent[c.id].no_node) {
+                clusterAlarmsSent[c.id].no_node = true
+                Logger.printLine("ClusterManager", `Cluster ${c.name} has shutdown due to failure, No active nodes!`, "notice", undefined, undefined, false, "alarm-emergency")
+            }
         } else if (onlineNodes <= 1) {
+            delete clusterAlarmsSent[c.id].no_node
             mainFaults.unshift(`${c.name} Cluster Redundancy Fault`);
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
             clusterWarning = true;
             watchDogFaults.push(..._watchDogFaults);
+            if (!clusterAlarmsSent[c.id].no_redun) {
+                clusterAlarmsSent[c.id].no_redun = true
+                Logger.printLine("ClusterManager", `Cluster ${c.name} has no redundancy nodes!`, "alert")
+            }
+        } else {
+            delete clusterAlarmsSent[c.id].no_node
+            delete clusterAlarmsSent[c.id].no_redun
         }
         if (activeNode === '🔎') {
             mainFaults.unshift(`${c.name} Cluster Failure`);
@@ -683,6 +699,12 @@ async function updateIndicators() {
             clusterActive.set(c.id, false);
             localParameters.removeItem('clusterActive-' + c.id);
             watchDogFaults.push(..._watchDogFaults);
+            if (!clusterAlarmsSent[c.id].searching) {
+                clusterAlarmsSent[c.id].searching = true
+                Logger.printLine("ClusterManager", `Cluster ${c.name} is attempting to recover, searching for a new node...`, "notice", undefined, undefined, false, "alarm-red")
+            }
+        } else {
+            delete clusterAlarmsSent[c.id].searching
         }
         if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
             clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
@@ -718,7 +740,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} primary address is not responding!`, "error")
+                                    Logger.printLine("StatusUpdate", `${host.name} primary address is not responding!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         } else {
                             watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
@@ -740,7 +762,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                    Logger.printLine("StatusUpdate", `${host.name} is not responding!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         } else {
                             watchdogsDead.set(`ping-${host.ip}`, new Date().getTime());
@@ -765,7 +787,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.delete(`ping-${host.ip}`);
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is not responding!`, "error")
+                                    Logger.printLine("StatusUpdate", `${host.name} is not responding!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         }
                     }
@@ -794,7 +816,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} primary is inaccessible!`, "error")
+                                    Logger.printLine("StatusUpdate", `${host.name} primary is inaccessible!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         } else {
                             watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
@@ -816,7 +838,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
-                                    Logger.printLine("StatusUpdate", `🚨 ${host.name} is inaccessible!`, "error")
+                                    Logger.printLine("StatusUpdate", `${host.name} is inaccessible!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         } else {
                             watchdogsDead.set(`httpcheck-${md5(host.url)}`, new Date().getTime());
@@ -841,7 +863,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.delete(`httpcheck-${md5(host.url)}`);
-                                    Logger.printLine("StatusUpdate", `🎉 ${host.name} is responding now!`, "error")
+                                    Logger.printLine("StatusUpdate", `${host.name} is responding now!`, "notice", undefined, undefined, false, "alarm-red")
                                 })
                         }
                     }

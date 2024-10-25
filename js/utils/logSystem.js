@@ -194,7 +194,7 @@ module.exports = function (facility, subclient) {
     }
 
     module.sendData = sendData;
-    module.printLine = async function printLine(proccess, text, level, object, object2, no_ack = false) {
+    module.printLine = async function printLine(proccess, text, level, object, object2, no_ack = false, color) {
         let logObject = {}
         let logString =  `${text}`
         if (typeof object !== 'undefined' || (object && object !== null)) {
@@ -229,14 +229,14 @@ module.exports = function (facility, subclient) {
         }
         if (level === "warn" || level === "warning") {
             if (remoteLogger)
-                sendLog(proccess, logString, 'warning', logObject);
+                sendLog(proccess, logString, 'warning', logObject, undefined, color);
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgYellow)
             if (!text.toLowerCase().includes('block') && systemglobal.log_objects) {
                 console.error(logObject)
             }
         } else if (level === "error" || level === "err") {
             if (remoteLogger)
-                sendLog(proccess, logString, 'error', logObject);
+                sendLog(proccess, logString, 'error', logObject, undefined, color);
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgRed)
             if (object)
                 console.error(object)
@@ -244,7 +244,7 @@ module.exports = function (facility, subclient) {
                 console.error(object2)
         } else if (level === "critical" || level === "crit") {
             if (remoteLogger)
-                sendLog(proccess, logString, 'critical', logObject);``
+                sendLog(proccess, logString, 'critical', logObject, undefined, color);``
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.bgMagenta)
             if (object)
                 console.error(object)
@@ -252,12 +252,12 @@ module.exports = function (facility, subclient) {
                 console.error(object2)
         } else if (level === "alert") {
             if (remoteLogger)
-                sendLog(proccess, logString, 'alert', logObject);
+                sendLog(proccess, logString, 'alert', logObject, undefined, color);
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.red)
             console.log(logObject)
         } else if (level === "emergency") {
             if (remoteLogger)
-                sendLog(proccess, logString, 'emergency', logObject);
+                sendLog(proccess, logString, 'emergency', logObject, undefined, color);
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.bgMagenta)
             if (object)
                 console.error(object)
@@ -269,53 +269,53 @@ module.exports = function (facility, subclient) {
         } else if (level === "notice") {
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.green)
             if (remoteLogger)
-                sendLog(proccess, logString, 'notice', logObject);
+                sendLog(proccess, logString, 'notice', logObject, undefined, color);
             if (systemglobal.log_objects) { console.log(logObject) }
         } else if (level === "debug") {
             if (text.includes("New Message: ") || text.includes("Reaction Added: ")) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'cyan');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'cyan');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgCyan)
             } else if (text.includes('Message Deleted: ') || text.includes('Reaction Removed: ')) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'blue');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'blue');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgBlue)
             } else if (text.includes('Send Message: ') || text.includes('Status Update: ')) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'green');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'green');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgGreen)
             } else if (text.includes('Send Package: ')) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'cyan');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'cyan');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgCyan)
             } else {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'debug', logObject);
+                    sendLog(proccess, logString, 'debug', logObject, undefined, color);
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.gray)
             }
             if (systemglobal.log_objects) { console.log(logObject) }
         } else if (level === "info") {
             if (text.includes("Sent message to ") || text.includes("Connected to Kanmi Exchange as ")) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'gray');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'gray');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.gray)
             } else if (text.includes('New Media Tweet in')) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'green');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'green');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgGreen)
             } else if (text.includes('New Text Tweet in')) {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject, undefined, 'green');
+                    sendLog(proccess, logString, 'info', logObject, undefined, color || 'green');
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.black.bgGreen)
             } else {
                 if (remoteLogger)
-                    sendLog(proccess, logString, 'info', logObject);
+                    sendLog(proccess, logString, 'info', logObject, undefined, color);
                 console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`.cyan.bgBlack)
             }
             if (systemglobal.log_objects) { console.log(logObject) }
         } else {
             if (remoteLogger)
-                sendLog(proccess, logString, 'debug', logObject);
+                sendLog(proccess, logString, 'debug', logObject, undefined, color);
             if (systemglobal.log_objects) { console.log(logObject) }
             console.log(`[${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}][${proccess}] ${text}`)
         }
