@@ -670,6 +670,8 @@ async function updateIndicators() {
         if (clusterAlarmsSent[c.id])
             clusterAlarmsSent[c.id] = {}
         if (onlineNodes === 0) {
+            if (clusterAlarmsSent[c.id].no_redun)
+                delete clusterAlarmsSent[c.id].no_redun
             mainFaults.unshift(`${c.name} Cluster Stopped`);
             watchDogFaults.push(`🚧 Cluster ${c.name} has no active nodes!`);
             clusterFault = true;
@@ -679,7 +681,8 @@ async function updateIndicators() {
                 Logger.printLine("ClusterManager", `Cluster ${c.name} has shutdown due to failure, No active nodes!`, "notice", undefined, undefined, false, "alarm-emergency")
             }
         } else if (onlineNodes <= 1) {
-            delete clusterAlarmsSent[c.id].no_node
+            if (clusterAlarmsSent[c.id].no_node)
+                delete clusterAlarmsSent[c.id].no_node
             mainFaults.unshift(`${c.name} Cluster Redundancy Fault`);
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
             clusterWarning = true;
@@ -689,8 +692,10 @@ async function updateIndicators() {
                 Logger.printLine("ClusterManager", `Cluster ${c.name} has no redundancy nodes!`, "alert")
             }
         } else {
-            delete clusterAlarmsSent[c.id].no_node
-            delete clusterAlarmsSent[c.id].no_redun
+            if (clusterAlarmsSent[c.id].no_node)
+                delete clusterAlarmsSent[c.id].no_node
+            if (clusterAlarmsSent[c.id].no_redun)
+                delete clusterAlarmsSent[c.id].no_redun
         }
         if (activeNode === '🔎') {
             mainFaults.unshift(`${c.name} Cluster Failure`);
@@ -704,7 +709,8 @@ async function updateIndicators() {
                 Logger.printLine("ClusterManager", `Cluster ${c.name} is attempting to recover, searching for a new node...`, "notice", undefined, undefined, false, "alarm-red")
             }
         } else {
-            delete clusterAlarmsSent[c.id].searching
+            if (clusterAlarmsSent[c.id].searching)
+                delete clusterAlarmsSent[c.id].searching
         }
         if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
             clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
