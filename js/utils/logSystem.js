@@ -86,12 +86,10 @@ module.exports = function (facility, subclient) {
         };
         logServerConn.onmessage = (event) => { handleIncomingMessage(event); };
         logServerConn.onclose = () => {
-            //console.log('[LogServer] Disconnected from the server');
             logServerisConnected = false;
             reconnectToWebSocket(serverUrl);
         };
         logServerConn.onerror = (error) => {
-            console.error('[LogServer] Error:', error);
             logServerisConnected = false;
             logServerConn.close();
         };
