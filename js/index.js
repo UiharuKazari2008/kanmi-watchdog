@@ -562,7 +562,7 @@ async function updateIndicators() {
                                 })
                                 .then(() => {
                                     watchdogsDead.set(`${w.id}-${e}`, true);
-                                    Logger.printLine("StatusUpdate", `Entity ${w.id}/${e} has reset!`, "notice")
+                                    Logger.printLine("StatusUpdate", `Entity ${w.id}/${e} has reset!`, "alert")
                                 })
                         } else {
                             watchdogsDead.set(`${w.id}-${e}`, true);
