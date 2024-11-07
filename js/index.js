@@ -738,6 +738,7 @@ async function updateIndicators() {
 
                 if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8 && host.fail_on_fallback) {
                     pingResults.push(`🔻 ${host.name}`);
+                    pingResults.push(`🔻 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} primary address is not responding!`)
@@ -756,10 +757,12 @@ async function updateIndicators() {
                     mainFaults.unshift(`${host.name} primary address is offline!`);
                 } else if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8) {
                     pingResults.push(`🔻 ${host.name}`);
+                    publishData.push(`🔻 ${host.name}`);
                     watchDogWarnings.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     watchdogsWarn.set(`ping-${host.ip}`, true)
                 } else if (_wS && _wS.time && _tS >= 4.8) {
                     pingResults.push(`🟥 ${host.name}`);
+                    publishData.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`ping-${host.ip}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`ping-${host.ip}`)) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is not responding!`)
@@ -778,6 +781,7 @@ async function updateIndicators() {
                     mainFaults.unshift(`${host.name} is offline!`);
                 } else if (!_wS || !_wS.time || parseFloat(_wS.packetLoss) > 0) {
                     pingResults.push(`🟨 ${host.name}`);
+                    publishData.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is dropping packets!`)
                     watchdogsWarn.set(`ping-${host.ip}`, true)
                 } else {
@@ -814,6 +818,7 @@ async function updateIndicators() {
 
                 if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8 && host.fail_on_fallback) {
                     httpResults.push(`🔻 ${host.name}`);
+                    publishData.push(`🔻 ${host.name}`);
                     if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} primary is inaccessible!`)
@@ -832,10 +837,12 @@ async function updateIndicators() {
                     mainFaults.push(`${host.name} primary is inaccessible!`);
                 } else if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8) {
                     httpResults.push(`🔻 ${host.name}`);
+                    publishData.push(`🔻 ${host.name}`);
                     watchDogWarnings.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
                     watchdogsWarn.set(`ping-${host.ip}`, true)
                 } else if (_wS && _wS.time && _tS >= 4.8) {
                     httpResults.push(`🟥 ${host.name}`);
+                    publishData.push(`🟥 ${host.name}`);
                     if (!watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                         if (!host.no_notify_on_fail && !alarminhibited && !watchdogsDead.has(`httpcheck-${md5(host.url)}`)) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ${host.name} is inaccessible!`)
@@ -854,6 +861,7 @@ async function updateIndicators() {
                     mainFaults.push(`${host.name} is inaccessible!`);
                 } else if (!_wS || !_wS.time || _wS.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
+                    publishData.push(`🟨 ${host.name}`);
                     watchDogWarnings.push(`⚠️ ${host.name} is degraded!`)
                     watchdogsWarn.set(`httpcheck-${md5(host.url)}`, true)
                 } else {
