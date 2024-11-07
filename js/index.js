@@ -714,8 +714,8 @@ async function updateIndicators() {
         }
         if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
             clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
-        publishData.cluster.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
         }
+        publishData.cluster.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
     })
     if (watchdogConfig.Show_Overview && servicesReponding > 0) {
         if (servicesTotal === servicesReponding) {
