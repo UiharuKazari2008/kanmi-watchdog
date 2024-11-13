@@ -513,6 +513,7 @@ async function updateIndicators() {
     let clusterFault = false;
     let servicesReponding = 0;
     let servicesTotal = 0;
+    let othAlerts = [];
     await watchdogs.forEach(w => {
         let statusIcons =  ``;
         let hostsReponding = 0;
@@ -549,8 +550,8 @@ async function updateIndicators() {
                             watchdogsDead.set(`${w.id}-${e}`, true);
                         }
                     }
-                    watchDogFaults.push(`⁉️ Entity ${e}:${w.id} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
-                    mainFaults.push(`${e}:${w.id} has failed`);
+                    watchDogFaults.push(`⁉️ Service ${e} (${w.id}) has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    mainFaults.push(`${e} has failed`);
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     statusIcons += '🟨'
                     watchdogWarning = true;
@@ -568,7 +569,7 @@ async function updateIndicators() {
                             watchdogsDead.set(`${w.id}-${e}`, true);
                         }
                     }
-                    watchDogWarnings.push(`♻️ Entity ${e}:${w.id} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
+                    watchDogWarnings.push(`♻️ Service ${e} (${w.id}) restarted <t:${(_iS / 1000).toFixed(0)}:R>`)
                 } else {
                     hostsReponding++;
                     servicesReponding++;
@@ -620,9 +621,9 @@ async function updateIndicators() {
                         }
                     }
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
-                        mainFaults.push(`${c.name} Cluster Node has failed!`);
+                        mainFaults.push(`${c.name} Cluster Node Fault`);
                     }
-                    _watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not been online sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    _watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
                 } else if (_tS >= (ei.warn_time || 3)) {
                     statusIcons += '🟧'
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
@@ -651,7 +652,7 @@ async function updateIndicators() {
                         }
                     }
 
-                    watchDogWarnings.push(`♻️ ${c.name} Cluster Node ${ei.name} reset <t:${(_iS / 1000).toFixed(0)}:R>`)
+                    watchDogWarnings.push(`♻️ ${c.name} Cluster Node ${ei.name} restarted <t:${(_iS / 1000).toFixed(0)}:R>`)
                     onlineNodes++;
                     servicesReponding++;
                 } else {
@@ -669,6 +670,21 @@ async function updateIndicators() {
         })
         if (!clusterAlarmsSent[c.id])
             clusterAlarmsSent[c.id] = {}
+        if (activeNode === '🔎') {
+            mainFaults.unshift(`${c.name} Cluster Failure`);
+            watchDogFaults.unshift(`🔎 Cluster ${c.name} is searching for a new node...`);
+            clusterWarning = true;
+            clusterActive.set(c.id, false);
+            localParameters.removeItem('clusterActive-' + c.id);
+            watchDogFaults.push(..._watchDogFaults);
+            if (!clusterAlarmsSent[c.id].searching) {
+                clusterAlarmsSent[c.id].searching = true
+                Logger.printLine("ClusterManager", `Cluster ${c.name} is attempting to recover, searching for a new node...`, "notice", undefined, undefined, false, "alarm-red")
+            }
+        } else {
+            if (clusterAlarmsSent[c.id].searching)
+                delete clusterAlarmsSent[c.id].searching
+        }
         if (onlineNodes === 0) {
             if (clusterAlarmsSent[c.id].no_redun)
                 delete clusterAlarmsSent[c.id].no_redun
@@ -696,21 +712,6 @@ async function updateIndicators() {
                 delete clusterAlarmsSent[c.id].no_node
             if (clusterAlarmsSent[c.id].no_redun)
                 delete clusterAlarmsSent[c.id].no_redun
-        }
-        if (activeNode === '🔎') {
-            mainFaults.unshift(`${c.name} Cluster Failure`);
-            watchDogFaults.unshift(`🔎 Cluster ${c.name} is searching for a new node...`);
-            clusterWarning = true;
-            clusterActive.set(c.id, false);
-            localParameters.removeItem('clusterActive-' + c.id);
-            watchDogFaults.push(..._watchDogFaults);
-            if (!clusterAlarmsSent[c.id].searching) {
-                clusterAlarmsSent[c.id].searching = true
-                Logger.printLine("ClusterManager", `Cluster ${c.name} is attempting to recover, searching for a new node...`, "notice", undefined, undefined, false, "alarm-red")
-            }
-        } else {
-            if (clusterAlarmsSent[c.id].searching)
-                delete clusterAlarmsSent[c.id].searching
         }
         if (activeNode === '🔎' || statusIcons.substring(0,1) !== "✅" || !watchdogConfig.Minimize_Cluster || onlineNodes !== c.entities.length) {
             clusterEntites.push(`${c.header}${c.name} [**${activeNode}**]: ${statusIcons}`);
@@ -754,7 +755,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                    mainFaults.unshift(`${host.name} primary address is offline!`);
+                    mainFaults.unshift(`${host.name} Network Failover`);
                 } else if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8) {
                     pingResults.push(`🔻 ${host.name}`);
                     publishData.ping.push(`🔻 ${host.name}`);
@@ -778,7 +779,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                    mainFaults.unshift(`${host.name} is offline!`);
+                    mainFaults.unshift(`${host.name} Network Fault`);
                 } else if (!_wS || !_wS.time || parseFloat(_wS.packetLoss) > 0) {
                     publishData.ping.push(`🟨 ${host.name}`);
                     publishData.push(`🟨 ${host.name}`);
@@ -834,7 +835,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`🔻 ${host.name} primary has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                    mainFaults.push(`${host.name} primary is inaccessible!`);
+                    mainFaults.push(`${host.name} Failover`);
                 } else if (_wS && _wS.time && _tS >= 4.8 && _fS && _fS.time && _tF < 4.8) {
                     httpResults.push(`🔻 ${host.name}`);
                     publishData.http.push(`🔻 ${host.name}`);
@@ -858,7 +859,7 @@ async function updateIndicators() {
                         }
                     }
                     watchDogFaults.push(`⁉️ ${host.name} has not responded sense <t:${((_wS || new Date().getTime()) / 1000).toFixed(0)}:R>`)
-                    mainFaults.push(`${host.name} is inaccessible!`);
+                    mainFaults.push(`${host.name} Inaccessible`);
                 } else if (!_wS || !_wS.time || _wS.duration >= 2000) {
                     httpResults.push(`🟨 ${host.name}`);
                     publishData.http.push(`🟨 ${host.name}`);
@@ -926,6 +927,7 @@ async function updateIndicators() {
     Logger.sendData({
         watchdog: {
             message: topMessage,
+            mainFaults,
             publishData,
             watchdogWarning, clusterWarning,
             watchdogFault, clusterFault,
