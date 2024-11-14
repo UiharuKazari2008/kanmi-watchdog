@@ -514,6 +514,7 @@ async function updateIndicators() {
     let servicesReponding = 0;
     let servicesTotal = 0;
     let othAlerts = [];
+    const noyapp = watchdogConfig.allow_fail || [];
     await watchdogs.forEach(w => {
         let statusIcons =  ``;
         let hostsReponding = 0;
@@ -537,7 +538,7 @@ async function updateIndicators() {
                     statusIcons += '🟥'
                     watchdogFault = true;
                     if (!watchdogsDead.has(`${w.id}-${e}`)) {
-                        if (!alarminhibited) {
+                        if (!alarminhibited && noyapp.indexOf(`${w.id}-${e}`) === -1) {
                             discordClient.createMessage(watchdogConfig.Discord_Alarm_Channel, `🚨 ALARM! Entity ${e}:${w.id} may be dead!`)
                                 .catch(err => {
                                     Logger.printLine("StatusUpdate", `Error sending message for alarm : ${err.message}`, "error", err)
@@ -550,8 +551,12 @@ async function updateIndicators() {
                             watchdogsDead.set(`${w.id}-${e}`, true);
                         }
                     }
-                    watchDogFaults.push(`⁉️ Service ${e} (${w.id}) has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
-                    mainFaults.push(`${e} has failed`);
+                    if (noyapp.indexOf(`${w.id}-${e}`) === -1) {
+                        mainFaults.push(`${e} has failed`);
+                        watchDogFaults.push(`⁉️ Service ${e} (${w.id}) has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    } else {
+                        watchDogWarnings.push(`⁉️ Service ${e} (${w.id}) has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    }
                 } else if (!isNaN(_tI) && _tI <= 30) {
                     statusIcons += '🟨'
                     watchdogWarning = true;
@@ -620,10 +625,14 @@ async function updateIndicators() {
                             clusterDead.set(`${c.id}-${e}`, true);
                         }
                     }
-                    if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
+                    if (clusterActive.has(c.id) && clusterActive.get(c.id) === e && noyapp.indexOf(`${c.id}-${e}`) === -1) {
                         mainFaults.push(`${c.name} Cluster Node Fault`);
                     }
-                    _watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    if (noyapp.indexOf(`${c.id}-${e}`) === -1) {
+                        _watchDogFaults.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    } else {
+                        watchDogWarnings.push(`⁉️ ${c.name} Cluster Node ${ei.name} has not responded sense <t:${(_wS / 1000).toFixed(0)}:R>`)
+                    }
                 } else if (_tS >= (ei.warn_time || 3)) {
                     statusIcons += '🟧'
                     if (clusterActive.has(c.id) && clusterActive.get(c.id) === e) {
