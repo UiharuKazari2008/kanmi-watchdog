@@ -218,6 +218,7 @@ app.get("/watchdog/ping", function(req, res, next) {
             watchdogsEntities.set(`${req.query.id}-${req.query.entity}`, new Date().getTime());
             res.status(200).send('Pong');
         } else {
+            console.log(`Entity ${req.query.entity}:${req.query.id} is not known?`)
             res.status(404).send('Entity not found');
         }
     } else if (req.query.entity) {
@@ -234,6 +235,7 @@ app.get("/watchdog/init", function(req, res, next) {
             Logger.printLine("StatusUpdate", `Entity ${req.query.entity}:${req.query.id} has initialized!`, "warning");
             res.status(200).send('Ok')
         } else {
+            console.log(`Entity ${req.query.entity}:${req.query.id} is not known?`)
             res.status(404).send('Entity not found');
         }
     } else if (req.query.entity) {
