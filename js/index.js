@@ -687,7 +687,6 @@ async function updateIndicators() {
             clusterWarning = true;
             clusterActive.set(c.id, false);
             localParameters.removeItem('clusterActive-' + c.id);
-            watchDogFaults.push(..._watchDogFaults);
             if (!clusterAlarmsSent[c.id].searching) {
                 clusterAlarmsSent[c.id].searching = true
                 Logger.printLine("ClusterManager", `Cluster ${c.name} is attempting to recover, searching for a new node...`, "notice", undefined, undefined, false, "alarm-red")
