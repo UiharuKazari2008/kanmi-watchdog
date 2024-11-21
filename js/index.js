@@ -708,7 +708,8 @@ async function updateIndicators() {
         } else if (onlineNodes <= 1) {
             if (clusterAlarmsSent[c.id].no_node)
                 delete clusterAlarmsSent[c.id].no_node
-            mainFaults.unshift(`${c.name} Cluster Redundancy Fault`);
+            if (!c.redundancy_quiet)
+                mainFaults.unshift(`${c.name} Cluster Redundancy Fault`);
             watchDogWarnings.push(`🛟 Cluster ${c.name} has no redundant nodes!`)
             clusterWarning = true;
             watchDogFaults.push(..._watchDogFaults);
