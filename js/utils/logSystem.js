@@ -116,7 +116,7 @@ module.exports = function (facility, subclient) {
                             return;
                         }
                         if (action === 'start') {
-                            pm2.stop(processName || process.env.name, (err) => {
+                            pm2.start(processName || process.env.name, (err) => {
                                 if (err) console.error(`Failed to stop ${processName || process.env.name}:`, err);
                                 else console.log(`Stopped ${processName || process.env.name} via PM2`);
                             });
