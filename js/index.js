@@ -995,7 +995,8 @@ function registerEntities() {
                 header: c.header,
                 fail_time: c.fail_time,
                 warn_time: c.warn_time,
-                entities: c.systems
+                entities: c.systems,
+                redundancy_quiet: c.redundancy_quiet,
             })
             const clusterActiveNode = await localParameters.getItem('clusterActive-' + c.id)
             if (clusterActiveNode) {
